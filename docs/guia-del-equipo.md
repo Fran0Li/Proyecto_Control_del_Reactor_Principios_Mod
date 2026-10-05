@@ -4,7 +4,7 @@ Lean esto antes de empezar a programar. Explica qué trae el repo, cómo levanta
 
 **Enlaces**
 
-- Repositorio: `<link del repo>`
+- Repositorio: https://github.com/Fran0Li/Proyecto_Control_del_Reactor_Principios_Mod.git
 - Azure Boards: https://dev.azure.com/proyecto-control-del-reactor/Control%20del%20Reactor/_workitems/recentlyupdated/
 - Wiki: https://dev.azure.com/proyecto-control-del-reactor/Control%20del%20Reactor/_wiki/wikis/Control-del-Reactor.wiki/1/Control-del-Reactor-%C3%8Dndice
 - Entrega del Sprint 2: **jueves 22 de octubre**

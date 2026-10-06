@@ -13,6 +13,23 @@ jobs:
     defaults:
       run:
         working-directory: server
+    # Base de datos temporal solo para el CI (se destruye al terminar el job)
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: reactor
+          POSTGRES_PASSWORD: reactor_ci
+          POSTGRES_DB: reactor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reactor -d reactor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://reactor:reactor_ci@localhost:5432/reactor
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +44,9 @@ jobs:
 
       - name: Lint (ruff)
         run: ruff check .
+
+      - name: Migraciones (alembic)
+        run: alembic upgrade head
 
       - name: Pruebas (pytest)
         run: pytest

@@ -1,9 +1,10 @@
 # Hardware
 
-Control físico de 5 botones: arriba, abajo, izquierda, derecha y acción.
+Control físico de 5 botones con Arduino: arriba, abajo, izquierda, derecha y acción.
+Se conecta por USB Serial a la computadora del jugador; el cliente pygame traduce las señales y
+las envía al servidor por WebSocket.
 
-- `simulator/`: simulador del control para probar sin el ESP32.
-- `firmware/`: código del ESP32/Arduino (se agrega cuando exista el prototipo).
+- `simulator/`: simulador del control para probar sin el Arduino.
+- `firmware/`: código del Arduino (se agrega cuando exista el prototipo).
 
-El contrato de mensajes y el protocolo (WebSocket, MQTT o Serial) se documentan en
-`docs/adr/` y en la Wiki cuando se definan. Rol C.
+Mensajes, pines y protocolo: [`docs/contrato-api-hardware.md`](../docs/contrato-api-hardware.md).

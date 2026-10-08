@@ -80,3 +80,5 @@ def downgrade() -> None:
     op.drop_table('usuarios')
     op.drop_table('partidas')
     # ### end Alembic commands ###
+    # Alembic no borra solo el tipo enum de PostgreSQL; sin esto, volver a aplicar falla.
+    sa.Enum(name='estadopartida').drop(op.get_bind(), checkfirst=True)

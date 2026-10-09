@@ -41,35 +41,33 @@ Todo desde esta carpeta (`prototipos/cliente-movil`), en la PC.
 Si Windows pregunta por el firewall al iniciar Python, hay que permitir **redes privadas**.
 Si el celular no carga, revisar que la red WiFi esté marcada como privada en Windows.
 
-## Qué validar
+## Resultados (09/10/2026)
+
+Probado en Chrome de la PC y Chrome de un celular Android, en la misma red WiFi.
 
 | # | Prueba | Resultado |
 | --- | --- | --- |
-| 1 | `pygbag` compila y la página carga en la PC | |
-| 2 | La página carga en el celular | |
-| 3 | En el navegador dice "Conexión: abierta" | |
-| 4 | Los botones táctiles mueven al jugador en el celular | |
-| 5 | Desde PC (teclado) y celular (táctil) a la vez, cada uno ve moverse al otro | |
-| 6 | Mantener presionado y soltar: el jugador se detiene al soltar | |
-| 7 | Latencia mostrada en el celular menor a 500 ms (RNF-02) | |
-| 8 | Fluidez aceptable en el celular (sin tirones fuertes) | |
+| 1 | `pygbag` compila y la página carga en la PC | ✅ |
+| 2 | La página carga en el celular | ✅ |
+| 3 | En el navegador dice "Conexión: abierta" | ✅ |
+| 4 | Los botones táctiles mueven al jugador en el celular | ✅ |
+| 5 | Desde PC (teclado) y celular (táctil) a la vez, cada uno ve moverse al otro | ✅ 3 jugadores a la vez |
+| 6 | Mantener presionado y soltar: el jugador se detiene al soltar | ✅ tras la corrección de abajo |
+| 7 | Latencia menor a 500 ms (RNF-02) | ✅ 16 ms navegador de PC, 33 ms celular |
+| 8 | Fluidez aceptable en el celular | ✅ |
 
-Validado aquí, sin el celular:
-- Cliente de escritorio + servidor: dos clientes a la vez, teclado y táctil, el jugador se detiene
-  al soltar, entrada inválida responde `error`, latencia local de unos 20 ms.
-- `red.ConexionNavegador` ejecutado contra el motor JavaScript real de Chromium: conecta, envía
-  y recibe con el formato del contrato.
+**Problema encontrado y corregido:** en el celular un botón podía quedarse presionado porque el
+navegador a veces cancela el toque y no llega el evento de soltar. `Tactil.revisar()` compara en
+cada frame los botones presionados con los dedos que siguen en pantalla y suelta los que sobran.
+La línea "Eventos táctiles" de la parte de abajo de la pantalla sirve para diagnosticar.
 
-Falta validarlo con el runtime de pygbag y en un celular real (pruebas 1 a 8).
+Además, sin celular: el cliente de escritorio y `red.ConexionNavegador` (contra el motor JavaScript
+de Chromium) se probaron con dos clientes simultáneos, entradas inválidas y soltar botones.
 
-## Reglas para el cliente real si la prueba sale bien
+**Decisión:** ver `docs/adr/0002-cliente-movil-pygbag.md`.
 
-1. El ciclo principal es `async def main()` y llama a `await asyncio.sleep(0)` en cada frame.
-2. Nada bloqueante en el cliente: ni `requests`, ni `time.sleep`, ni sockets directos. La red va
-   detrás de una interfaz con implementación para escritorio y para navegador (`red.py`).
-3. Las entradas usan la interfaz de "fuente de entrada" (`entrada.py`): teclado, táctil y Arduino.
-4. Imports que solo existen en escritorio (`websockets`, `pyserial`) se hacen dentro de la clase
-   de escritorio, para que pygbag no los busque.
-5. pygbag usa **pygame-ce**. Conviene usar `pygame-ce` también en escritorio para tener la misma
-   versión en las dos plataformas (el código de pygame es compatible).
-6. Si la página se sirve por HTTPS (por ejemplo, en la nube), el WebSocket tiene que ser `wss://`.
+## Reglas para el cliente real
+
+Están en el ADR 0002. En resumen: ciclo principal `async`, nada bloqueante, red y entradas detrás
+de interfaces (`red.py`, `entrada.py`), imports de escritorio dentro de sus clases y `pygame-ce`
+en las dos plataformas.

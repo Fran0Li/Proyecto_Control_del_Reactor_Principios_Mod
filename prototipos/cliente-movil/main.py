@@ -54,6 +54,7 @@ async def main() -> None:
                 fuente.procesar(evento)
 
         for fuente in fuentes:
+            fuente.revisar()
             for control, estado in fuente.obtener():
                 seq += 1
                 ultimo_origen = fuente.origen
@@ -102,6 +103,9 @@ async def main() -> None:
             pantalla.blit(letra.render(texto, True, (200, 200, 200)), (24, 22 + i * 26))
         for fuente in fuentes:
             fuente.dibujar(pantalla)
+        registro = " ".join(fuentes[1].registro) or "-"
+        texto = letra.render(f"Eventos táctiles: {registro}", True, (120, 140, 170))
+        pantalla.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO - 34))
 
         pygame.display.flip()
         reloj.tick(60)

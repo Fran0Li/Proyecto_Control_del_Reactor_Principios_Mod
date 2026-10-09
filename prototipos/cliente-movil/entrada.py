@@ -23,6 +23,9 @@ class FuenteEntrada:
         pendientes, self._pendientes = self._pendientes, []
         return pendientes
 
+    def revisar(self) -> None:
+        """Opcional: se llama una vez por frame para corregir estados perdidos."""
+
     def dibujar(self, pantalla: pygame.Surface) -> None:
         """Opcional: las fuentes con interfaz visual (táctil) se dibujan aquí."""
 
@@ -68,6 +71,7 @@ class Tactil(FuenteEntrada):
         self._punteros: dict[str, str | None] = {}  # id de dedo o mouse -> control bajo él
         self._presionados: set[str] = set()
         self._hay_dedos = False
+        self.registro: list[str] = []  # últimos eventos recibidos, para diagnosticar en el celular
 
     def _control_en(self, x: float, y: float) -> str | None:
         for control, rect in self.botones.items():
@@ -75,7 +79,17 @@ class Tactil(FuenteEntrada):
                 return control
         return None
 
+    def _anotar(self, evento: pygame.event.Event) -> None:
+        nombres = {
+            pygame.FINGERDOWN: "dedo+", pygame.FINGERUP: "dedo-",
+            pygame.MOUSEBUTTONDOWN: "mouse+", pygame.MOUSEBUTTONUP: "mouse-",
+        }  # fmt: skip
+        if evento.type in nombres:
+            extra = f"{evento.finger_id}" if hasattr(evento, "finger_id") else ""
+            self.registro = (self.registro + [nombres[evento.type] + extra])[-8:]
+
     def procesar(self, evento: pygame.event.Event) -> None:
+        self._anotar(evento)
         tipo = evento.type
         if tipo in (pygame.FINGERDOWN, pygame.FINGERMOTION):
             self._hay_dedos = True
@@ -97,6 +111,25 @@ class Tactil(FuenteEntrada):
             return
         self._actualizar()
 
+    def revisar(self) -> None:
+        """Red de seguridad: suelta botones cuyo dedo o clic ya no existe.
+
+        En el celular a veces se pierde el evento de "soltar" (el navegador cancela el toque),
+        y el botón quedaba presionado. Aquí se compara con los dedos que siguen en pantalla.
+        """
+        cambio = False
+        if "mouse" in self._punteros and not pygame.mouse.get_pressed()[0]:
+            del self._punteros["mouse"]
+            cambio = True
+        activos = _dedos_en_pantalla()
+        if activos is not None:
+            for clave in [k for k in self._punteros if k.startswith("dedo")]:
+                if int(clave[4:]) not in activos:
+                    del self._punteros[clave]
+                    cambio = True
+        if cambio:
+            self._actualizar()
+
     def _actualizar(self) -> None:
         ahora = {c for c in self._punteros.values() if c is not None}
         for control in ahora - self._presionados:
@@ -115,3 +148,22 @@ class Tactil(FuenteEntrada):
             else:
                 pygame.draw.rect(capa, color, rect, border_radius=14)
         pantalla.blit(capa, (0, 0))
+
+
+def _dedos_en_pantalla() -> set[int] | None:
+    """Ids de los dedos que siguen tocando la pantalla, o None si no se puede saber."""
+    try:
+        from pygame._sdl2 import touch
+
+        if touch.get_num_devices() == 0:
+            return None  # sin pantalla táctil registrada: no se puede comparar
+        ids = set()
+        for i in range(touch.get_num_devices()):
+            dispositivo = touch.get_device(i)
+            for j in range(touch.get_num_fingers(dispositivo)):
+                dedo = touch.get_finger(dispositivo, j)
+                if dedo is not None:
+                    ids.add(int(dedo["id"]))
+        return ids
+    except Exception:  # noqa: BLE001 - versión de pygame sin esta API
+        return None

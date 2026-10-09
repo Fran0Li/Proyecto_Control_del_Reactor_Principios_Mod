@@ -1,7 +1,7 @@
 """Prototipo: el mismo cliente pygame en PC y en el navegador del celular (pygbag).
 
 Escritorio:  python main.py              (SERVIDOR=host:puerto para otro servidor)
-Navegador:   pygbag --bind 0.0.0.0 --port 8001 .   y abrir http://<IP-de-la-PC>:8001
+Navegador:   pygbag --bind <IP-de-la-PC> --port 8001 .   y abrir http://<IP-de-la-PC>:8001
 
 Prueba lo que hay que validar antes de seguir con el cliente real:
 - ciclo principal async (obligatorio en pygbag),

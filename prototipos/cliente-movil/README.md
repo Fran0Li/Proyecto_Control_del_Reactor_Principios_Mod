@@ -27,13 +27,15 @@ Todo desde esta carpeta (`prototipos/cliente-movil`), en la PC.
    ```
    python main.py
    ```
-4. Cliente web con pygbag (terminal 3):
+4. Cliente web con pygbag (terminal 3). Primero ver la IP de la PC con `ipconfig`
+   (Dirección IPv4 del adaptador WiFi, por ejemplo `192.168.1.50`) y usarla en `--bind`:
    ```
-   pygbag --bind 0.0.0.0 --port 8001 .
+   pygbag --bind 192.168.1.50 --port 8001 .
    ```
-   - En la PC: abrir `http://localhost:8001`.
-   - En el celular, **conectado al mismo WiFi**: abrir `http://<IP-de-la-PC>:8001`.
-     La IP se ve con `ipconfig` (IPv4 del adaptador WiFi).
+   > No usar `--bind 0.0.0.0`: pygbag usa esa dirección para que la página descargue su motor y
+   > el navegador la rechaza (`ERR_ADDRESS_INVALID`).
+   - En la PC y en el celular (**conectado al mismo WiFi**) abrir `http://192.168.1.50:8001`.
+   - La primera carga tarda porque descarga el motor de Python para el navegador.
    - Tocar la pantalla cuando diga "Ready to start".
 
 Si Windows pregunta por el firewall al iniciar Python, hay que permitir **redes privadas**.

@@ -1,6 +1,7 @@
 """Prototipo: el mismo cliente pygame en PC y en el navegador del celular (pygbag).
 
 Escritorio:  python main.py              (SERVIDOR=host:puerto para otro servidor)
+             CONTROL_PUERTO=COM3 o socket://localhost:7777 agrega el Arduino o el simulador
 Navegador:   pygbag --bind <IP-de-la-PC> --port 8001 .   y abrir http://<IP-de-la-PC>:8001
 
 Prueba lo que hay que validar antes de seguir con el cliente real:
@@ -22,6 +23,22 @@ ANCHO, ALTO = 960, 540
 FONDO = (12, 16, 32)
 
 
+def fuentes_de_hardware() -> list:
+    """Solo escritorio: agrega el control físico si CONTROL_PUERTO está definido."""
+    import os
+
+    puerto = os.getenv("CONTROL_PUERTO")
+    if EN_NAVEGADOR or not puerto:
+        return []
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "client"))
+    from src.entrada import EntradaSerial
+
+    return [EntradaSerial(puerto)]
+
+
 def ms() -> float:
     return time.monotonic() * 1000
 
@@ -36,7 +53,7 @@ async def main() -> None:
     url = url_del_servidor()
     conexion = crear_conexion(url)
     await conexion.conectar()
-    fuentes = [Teclado(), Tactil(ANCHO, ALTO)]
+    fuentes = [Teclado(), Tactil(ANCHO, ALTO), *fuentes_de_hardware()]
 
     seq = 0
     mi_id = None
@@ -67,6 +84,8 @@ async def main() -> None:
                         "seq": seq,
                     }
                 )
+            for aviso in getattr(fuente, "obtener_avisos", list)():
+                conexion.enviar(aviso)
 
         if conexion.estado == "abierta" and ms() - ultimo_ping > 1000:
             ultimo_ping = ms()
@@ -99,6 +118,11 @@ async def main() -> None:
             f"Latencia ida y vuelta: {f'{latencia:.0f} ms' if latencia is not None else '-'}",
             f"Última entrada desde: {ultimo_origen}",
         ]
+        for fuente in fuentes[2:]:
+            lineas.append(
+                f"Control físico ({fuente.puerto}): {fuente.estado}"
+                f" {fuente.id_dispositivo or ''}"
+            )
         for i, texto in enumerate(lineas):
             pantalla.blit(letra.render(texto, True, (200, 200, 200)), (24, 22 + i * 26))
         for fuente in fuentes:

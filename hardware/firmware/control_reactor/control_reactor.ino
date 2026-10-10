@@ -22,6 +22,9 @@ const unsigned long ANTIRREBOTE_MS = 20;
 const unsigned long LATIDO_MS = 1000;
 const int PIN_LED = 13;
 
+// Las funciones reciben el control como int (no como Control): el IDE de Arduino y Tinkercad
+// generan las declaraciones de las funciones al inicio del archivo, antes de este enum, y un tipo
+// propio en los parámetros da el error "'Control' was not declared in this scope".
 enum Control { ARRIBA, ABAJO, IZQUIERDA, DERECHA, ACCION, N_CONTROLES };
 const char *NOMBRES[N_CONTROLES] = {"UP", "DOWN", "LEFT", "RIGHT", "ACTION"};
 
@@ -47,7 +50,7 @@ unsigned long ultimoLatido = 0;
 
 #if USAR_JOYSTICK
 // Desplazamiento del eje hacia el lado "positivo" de cada dirección (0 = centro).
-int desplazamiento(Control c) {
+int desplazamiento(int c) {
   int x = analogRead(PIN_X) - CENTRO;
   int y = analogRead(PIN_Y) - CENTRO;
   if (INVERTIR_X) x = -x;
@@ -62,7 +65,7 @@ int desplazamiento(Control c) {
 }
 #endif
 
-bool leerControl(Control c) {
+bool leerControl(int c) {
 #if USAR_JOYSTICK
   if (c == ACCION) {
     return digitalRead(PIN_ACCION) == LOW || digitalRead(PIN_CLIC_JOYSTICK) == LOW;
@@ -75,7 +78,7 @@ bool leerControl(Control c) {
 #endif
 }
 
-void enviarBoton(Control c, bool presionado) {
+void enviarBoton(int c, bool presionado) {
   Serial.print("BTN ");
   Serial.print(NOMBRES[c]);
   Serial.println(presionado ? " PRESS" : " RELEASE");
@@ -107,8 +110,7 @@ void loop() {
   unsigned long ahora = millis();
 
   for (int i = 0; i < N_CONTROLES; i++) {
-    Control c = (Control)i;
-    bool actual = leerControl(c);
+    bool actual = leerControl(i);
     if (actual != lectura[i]) {  // cambió la lectura: reinicia el antirrebote
       lectura[i] = actual;
       ultimoCambio[i] = ahora;
@@ -116,7 +118,7 @@ void loop() {
     // Solo se confirma el cambio si la lectura se mantuvo estable ANTIRREBOTE_MS.
     if (lectura[i] != estable[i] && ahora - ultimoCambio[i] >= ANTIRREBOTE_MS) {
       estable[i] = lectura[i];
-      enviarBoton(c, estable[i]);
+      enviarBoton(i, estable[i]);
     }
   }
 

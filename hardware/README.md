@@ -1,8 +1,8 @@
 # Hardware
 
-Control físico con Arduino: movimiento (joystick o 4 botones) y botón de acción. Se conecta por
-USB Serial a la computadora del jugador; el cliente traduce las señales y las envía al servidor por
-WebSocket.
+Control físico con Arduino de 5 botones (arriba, abajo, izquierda, derecha y acción); el firmware
+admite también joystick para más adelante. Se conecta por USB Serial a la computadora del jugador
+y el cliente traduce las señales y las envía al servidor por WebSocket.
 
 | Carpeta | Contenido |
 | --- | --- |

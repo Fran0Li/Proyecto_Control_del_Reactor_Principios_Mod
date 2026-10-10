@@ -6,14 +6,14 @@
 //   HB                        latido cada 1 s
 //
 // Dos formas de armar el control (cambiar USAR_JOYSTICK):
+//   0 = cinco botones: arriba D2, abajo D3, izquierda D4, derecha D5, acción D6  (por defecto)
 //   1 = joystick analógico (VRx -> A0, VRy -> A1, SW -> D7) + botón de acción en D6
-//   0 = cinco botones: arriba D2, abajo D3, izquierda D4, derecha D5, acción D6
 // En los dos casos los botones van entre el pin y GND (INPUT_PULLUP, sin resistencias).
 // El joystick se traduce a los mismos mensajes que los botones, así que el resto del sistema
 // no cambia.
 
 #ifndef USAR_JOYSTICK
-#define USAR_JOYSTICK 1  // cambiar a 0 para usar 5 botones
+#define USAR_JOYSTICK 0  // 0 = 5 botones (actual), 1 = joystick
 #endif
 
 const char *ID_CONTROL = "CR-PAD-01";

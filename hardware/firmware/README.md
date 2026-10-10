@@ -7,11 +7,11 @@ Tiene dos formas de armado. Se elige con `USAR_JOYSTICK` al inicio del archivo:
 
 | `USAR_JOYSTICK` | Movimiento | Acción |
 | --- | --- | --- |
-| `1` (por defecto) | Joystick analógico: VRx → A0, VRy → A1 | Botón en D6; clic del joystick (SW) en D7 |
-| `0` | 4 botones: arriba D2, abajo D3, izquierda D4, derecha D5 | Botón en D6 |
+| `0` (por defecto) | 4 botones: arriba D2, abajo D3, izquierda D4, derecha D5 | Botón en D6 |
+| `1` | Joystick analógico: VRx → A0, VRy → A1 | Botón en D6; clic del joystick (SW) en D7 |
 
-Con joystick, el firmware convierte la palanca en los mismos mensajes que los botones (con
-diagonales), así que el cliente y el servidor no cambian.
+Con joystick (opción para más adelante), el firmware convierte la palanca en los mismos mensajes
+que los botones (con diagonales), así que el cliente y el servidor no cambian.
 
 - Botones entre el pin y GND, con `INPUT_PULLUP`: no llevan resistencias.
 - Antirrebote de 20 ms. Con joystick, histéresis: se activa al pasar de 300 y se suelta al bajar
@@ -21,21 +21,17 @@ diagonales), así que el cliente y el servidor no cambian.
 
 ## Probar en Tinkercad
 
-Tinkercad no tiene joystick: se simula con dos potenciómetros (un joystick son dos
-potenciómetros y un botón).
+1. Arduino Uno R3 y protoboard. **GND** del Arduino al riel **−** de la protoboard.
+2. Cinco pulsadores (*Pushbutton*) cruzando el canal central de la protoboard.
+3. De cada pulsador, una pata a su pin y la pata contraria (en diagonal) al riel GND:
+   arriba **D2**, abajo **D3**, izquierda **D4**, derecha **D5**, acción **D6**. Sin resistencias.
+4. **Code → Text**, pegar `control_reactor.ino`, **Start Simulation** y abrir el **Serial Monitor**.
 
-1. Arduino Uno R3 y protoboard. **5V** al riel **+** y **GND** al riel **−**.
-2. Potenciómetro 1 (eje X): extremos a GND y 5V, pata del medio a **A0**.
-3. Potenciómetro 2 (eje Y): extremos a GND y 5V, pata del medio a **A1**.
-4. Pulsador de acción: una pata a **D6** y la pata contraria a GND.
-5. (Opcional) segundo pulsador como clic del joystick: **D7** y GND.
-6. **Code → Text**, pegar `control_reactor.ino`, **Start Simulation** y abrir el **Serial Monitor**.
+Resultado esperado: `HELLO CR-PAD-01 1.0` al arrancar, `HB` cada segundo y, al mantener
+presionado un botón, `BTN UP PRESS` (o el que corresponda); al soltarlo, `BTN UP RELEASE`.
 
-Resultado esperado: `HELLO CR-PAD-01 1.0` al arrancar, `HB` cada segundo y, al girar un
-potenciómetro hacia un extremo, `BTN RIGHT PRESS` (o la dirección que corresponda); al volver al
-centro, `BTN RIGHT RELEASE`. El pulsador produce `BTN ACTION PRESS` / `RELEASE`.
-
-Para la versión de 5 botones: cambiar `USAR_JOYSTICK` a `0` y conectar 5 pulsadores a D2–D6.
+**Versión con joystick:** Tinkercad no tiene joystick; se simula con dos potenciómetros (extremos a
+GND y 5V, pata del medio a A0 y A1), cambiando `USAR_JOYSTICK` a `1`.
 
 ## Probar con el Arduino real
 
@@ -55,6 +51,6 @@ arranque, latidos, joystick con histéresis y diagonales, antirrebote y los 5 bo
 
 ```
 cd pruebas
-g++ -std=c++17 -Wall prueba_firmware.cpp -o prueba && ./prueba
-g++ -std=c++17 -Wall -DUSAR_JOYSTICK=0 prueba_firmware.cpp -o prueba && ./prueba
+g++ -std=c++17 -Wall prueba_firmware.cpp -o prueba && ./prueba                    # 5 botones
+g++ -std=c++17 -Wall -DUSAR_JOYSTICK=1 prueba_firmware.cpp -o prueba && ./prueba   # joystick
 ```

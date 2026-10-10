@@ -1,7 +1,7 @@
 // Pruebas del firmware en la PC, sin Arduino: simula millis(), los pines y el Serial.
 // Compilar y correr desde hardware/firmware/pruebas:
-//   g++ -std=c++17 -Wall prueba_firmware.cpp -o prueba && ./prueba                    (joystick)
-//   g++ -std=c++17 -Wall -DUSAR_JOYSTICK=0 prueba_firmware.cpp -o prueba && ./prueba   (5 botones)
+//   g++ -std=c++17 -Wall prueba_firmware.cpp -o prueba && ./prueba                    (5 botones)
+//   g++ -std=c++17 -Wall -DUSAR_JOYSTICK=1 prueba_firmware.cpp -o prueba && ./prueba   (joystick)
 #include "Arduino.h"
 unsigned long t_ms=0; int analogico[20]; int digital[20]; SerialMock Serial;
 #include "../control_reactor/control_reactor.ino"

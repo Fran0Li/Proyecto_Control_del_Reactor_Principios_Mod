@@ -1,12 +1,13 @@
 """Cliente pygame de Control del Reactor (esqueleto).
 
-Por ahora solo abre la ventana y muestra si el backend responde.
+Por ahora abre la ventana, muestra si el backend responde y el lobby.
 """
 
 import pygame
 import requests
 
 from src.config import FPS, SERVER_URL, WINDOW_SIZE
+from src.screens.lobby import LobbyScreen
 
 
 def server_status() -> str:
@@ -22,8 +23,8 @@ def main() -> None:
     screen = pygame.display.set_mode(WINDOW_SIZE)
     pygame.display.set_caption("Control del Reactor")
     clock = pygame.time.Clock()
-    title_font = pygame.font.Font(None, 64)
     text_font = pygame.font.Font(None, 32)
+    lobby = LobbyScreen(WINDOW_SIZE[0])
     status = server_status()
 
     running = True
@@ -33,12 +34,11 @@ def main() -> None:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 status = server_status()  # R para volver a probar la conexión
+            lobby.handle_event(event)
 
-        screen.fill((12, 16, 32))
-        title = title_font.render("CONTROL DEL REACTOR", True, (80, 200, 255))
+        lobby.draw(screen)
         info = text_font.render(f"{status}  (R para reintentar)", True, (200, 200, 200))
-        screen.blit(title, title.get_rect(center=(WINDOW_SIZE[0] // 2, 260)))
-        screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, 340)))
+        screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
         pygame.display.flip()
         clock.tick(FPS)
 

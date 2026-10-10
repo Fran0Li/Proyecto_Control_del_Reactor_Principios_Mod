@@ -45,6 +45,11 @@ mensajes de la capa 2 directamente al servidor.
 - Antirrebote (debounce) por software de **20 ms**.
 - LED integrado (D13) encendido mientras el control está enviando latidos (opcional).
 
+**Variante con joystick** (pendiente de confirmar con el Product Owner, porque RNF-10 pide cinco
+botones): VRx → A0, VRy → A1, clic del joystick (SW) → D7 y botón de acción en D6. El firmware
+convierte la palanca en los mismos mensajes `BTN UP/DOWN/LEFT/RIGHT`, con histéresis y diagonales,
+así que la capa 1 y todo lo que sigue no cambian. Detalle en `hardware/firmware/README.md`.
+
 ## Capa 1: Arduino → computadora (Serial)
 
 - USB Serial a **115200 baudios, 8N1**.
@@ -165,8 +170,9 @@ En el cliente, el teclado, el puerto serial y el simulador implementan una misma
 
 ## Simulador
 
-`hardware/simulator/` emite exactamente las mismas líneas de la capa 1, así que todo lo que está
-después del puerto serial se puede probar sin el Arduino. Se documenta su uso cuando esté listo.
+`hardware/simulator/simulador.py` emite exactamente las mismas líneas de la capa 1 por un socket
+local. El cliente lo abre como si fuera un puerto serial, con `socket://localhost:7777` en lugar de
+`COM3`, y marca sus entradas con `origen: "simulador"`. Uso en `hardware/simulator/README.md`.
 
 ## Pruebas
 

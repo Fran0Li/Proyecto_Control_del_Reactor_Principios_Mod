@@ -11,6 +11,9 @@ class Settings:
         "DATABASE_URL", "postgresql+psycopg://reactor:reactor_dev@localhost:5432/reactor"
     )
     jwt_secret: str = os.getenv("JWT_SECRET", "cambiar-esto-en-produccion")
+    # Orígenes web que pueden llamar a la API (cliente móvil con pygbag). "*" = cualquiera, solo
+    # para desarrollo; en la nube poner el dominio del cliente, separados por coma.
+    cors_origenes: str = os.getenv("CORS_ORIGENES", "*")
 
 
 settings = Settings()

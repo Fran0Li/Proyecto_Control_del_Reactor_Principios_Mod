@@ -50,13 +50,21 @@ con `origen` igual a `teclado`, `hardware`, `simulador` o `tactil`.
 ## Reglas para el cliente
 
 1. El ciclo principal es `async def main()` y hace `await asyncio.sleep(0)` en cada frame.
-2. Nada bloqueante en el cliente: ni `requests`, ni `time.sleep`, ni sockets directos.
-3. La red va detrás de una interfaz con una implementación para escritorio (librería `websockets`)
-   y otra para navegador (WebSocket de JavaScript), como en `prototipos/cliente-movil/red.py`.
+2. Nada bloqueante en el cliente: ni `requests`, ni `time.sleep`, ni sockets directos en las
+   pantallas ni en el ciclo principal.
+3. La red va detrás de una interfaz con una implementación para escritorio y otra para navegador:
+   - REST: en escritorio `requests` dentro de un hilo (`asyncio.to_thread`); en el navegador el
+     `fetch` del navegador. Está en `client/src/red/http.py`.
+   - Tiempo real: en escritorio la librería `websockets`; en el navegador el `WebSocket` del
+     navegador, como en `prototipos/cliente-movil/red.py`.
+
+   En el navegador, `fetch` y `WebSocket` se usan desde Python con `platform.window` de pygbag, que
+   ejecuta pequeñas instrucciones de JavaScript en la página. El cliente sigue siendo Python y
+   pygame: no se agrega otro lenguaje ni otro framework al stack del ADR 0001.
 4. Las entradas usan la interfaz de fuente de entrada (patrón Adapter): teclado, táctil y Arduino.
    La táctil incluye la revisión por frame de botones pegados.
-5. Las librerías que solo existen en escritorio (`websockets`, `pyserial`) se importan dentro de la
-   clase de escritorio, para que pygbag no intente instalarlas.
+5. Las librerías que solo existen en escritorio (`requests`, `websockets`, `pyserial`) se importan
+   dentro de la función o clase de escritorio, para que pygbag no intente instalarlas.
 6. Se usa **pygame-ce** también en escritorio, porque es la versión que trae pygbag.
 
 ## Consecuencias
@@ -66,6 +74,8 @@ con `origen` igual a `teclado`, `hardware`, `simulador` o `tactil`.
   para pruebas y en la nube para el Sprint 3 (RNF-09).
 - Si la página se publica por HTTPS, el WebSocket tiene que ser `wss://`, así que el backend en la
   nube necesita certificado TLS.
+- El backend permite CORS (`CORS_ORIGENES`) porque la página de pygbag (puerto 8001) llama a la
+  API (puerto 8000), que para el navegador es otro origen.
 - Al servir la versión web con el servidor de pruebas de pygbag hay que usar la IP real de la PC en
   `--bind`, no `0.0.0.0`.
 - La primera carga en el celular tarda unos segundos porque descarga el motor de Python.

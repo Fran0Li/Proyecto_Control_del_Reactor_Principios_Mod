@@ -1,5 +1,7 @@
 """Pantalla de registro de usuario (US-01)."""
 
+import asyncio
+
 import pygame
 
 from src.api_client import ApiError, registrar_usuario
@@ -42,10 +44,11 @@ class RegistroScreen:
         self.mensaje = ""
         self.mensaje_es_error = False
         self.siguiente_pantalla: str | None = None
+        self._tarea: asyncio.Task | None = None  # registro en curso (no congela la ventana)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.boton_crear.fue_presionado(event):
-            self._registrar()
+            self._iniciar_registro()
             return
         if self.boton_lobby.fue_presionado(event):
             self.siguiente_pantalla = "lobby"
@@ -54,7 +57,7 @@ class RegistroScreen:
             self._siguiente_campo()
             return
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-            self._registrar()
+            self._iniciar_registro()
             return
         for campo in self.campos:
             campo.handle_event(event)
@@ -69,7 +72,12 @@ class RegistroScreen:
         self.mensaje = mensaje
         self.mensaje_es_error = es_error
 
-    def _registrar(self) -> None:
+    def _iniciar_registro(self) -> None:
+        if self._tarea is not None and not self._tarea.done():
+            return  # ya hay uno en curso: evita registrar dos veces
+        self._tarea = asyncio.create_task(self._registrar())
+
+    async def _registrar(self) -> None:
         error = validar_registro(self.usuario.texto, self.correo.texto, self.contrasena.texto)
         if error is None and self.contrasena.texto != self.confirmacion.texto:
             error = "Las contraseñas no coinciden"
@@ -77,8 +85,9 @@ class RegistroScreen:
             self._mostrar(error, es_error=True)
             return
 
+        self._mostrar("Creando cuenta...", es_error=False)
         try:
-            registrar_usuario(
+            await registrar_usuario(
                 self.usuario.texto.strip(), self.correo.texto.strip(), self.contrasena.texto
             )
         except ApiError as error_api:

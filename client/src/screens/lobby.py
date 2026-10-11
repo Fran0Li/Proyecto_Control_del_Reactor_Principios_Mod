@@ -1,5 +1,6 @@
 """Pantalla de lobby: crear una partida (US-07)."""
 
+import asyncio
 import os
 
 import pygame
@@ -27,15 +28,23 @@ class LobbyScreen:
         self.fuente_texto = pygame.font.Font(None, 32)
         self.mensaje = ""
         self.mensaje_es_error = False
+        self._tarea: asyncio.Task | None = None  # petición en curso (no congela la ventana)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         clic_izquierdo = event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
         if clic_izquierdo and self.boton.collidepoint(event.pos):
-            self._crear_partida()
+            self._iniciar_creacion()
 
-    def _crear_partida(self) -> None:
+    def _iniciar_creacion(self) -> None:
+        if self._tarea is not None and not self._tarea.done():
+            return  # ya hay una en curso
+        self._tarea = asyncio.create_task(self._crear_partida())
+
+    async def _crear_partida(self) -> None:
+        self.mensaje = "Creando partida..."
+        self.mensaje_es_error = False
         try:
-            partida = crear_partida(JUGADOR_ID)
+            partida = await crear_partida(JUGADOR_ID)
         except ApiError as error:
             self.mensaje = str(error)
             self.mensaje_es_error = True

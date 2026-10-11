@@ -1,5 +1,3 @@
-"""Pruebas del servicio de registro contra la base de datos (US-01, AB#47)."""
-
 import pytest
 
 from app.core.security import ScryptPasswordHasher

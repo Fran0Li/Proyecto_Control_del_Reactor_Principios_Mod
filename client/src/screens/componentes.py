@@ -10,8 +10,6 @@ COLOR_ETIQUETA = (150, 160, 190)
 
 
 class CampoTexto:
-    """Caja de texto de una línea. Con `oculto=True` muestra asteriscos."""
-
     def __init__(
         self,
         rect: pygame.Rect,
@@ -47,7 +45,7 @@ class CampoTexto:
 
         visible = "*" * len(self.texto) if self.oculto else self.texto
         texto = self.fuente.render(visible, True, COLOR_TEXTO)
-        # Si el texto no cabe, se muestra el final (lo último que se escribió)
+        # si el texto es muy largo se ve solo el final
         ancho_util = self.rect.width - 20
         recorte = max(0, texto.get_width() - ancho_util)
         screen.blit(

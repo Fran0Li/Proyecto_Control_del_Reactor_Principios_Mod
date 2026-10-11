@@ -1,8 +1,6 @@
-"""Pruebas unitarias del hash de contraseñas (US-01, AB#45)."""
-
 from app.core.security import ScryptPasswordHasher
 
-# Parámetros bajos para que las pruebas corran rápido; producción usa los de defecto.
+# n bajo para que las pruebas corran rápido
 hasher = ScryptPasswordHasher(n=2**10)
 
 

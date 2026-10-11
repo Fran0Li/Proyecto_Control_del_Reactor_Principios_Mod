@@ -1,12 +1,4 @@
-"""Hash y verificación de contraseñas (US-01).
-
-Las contraseñas nunca se guardan en texto plano (RNF-03). Se usa scrypt, que viene
-en la biblioteca estándar de Python, con una sal aleatoria por contraseña.
-
-`PasswordHasher` es la abstracción de la que dependen los servicios (principio de
-inversión de dependencias); así se puede cambiar el algoritmo o usar uno falso
-en las pruebas sin tocar la lógica de registro o login.
-"""
+"""Hash de contraseñas (US-01). Se usa scrypt de hashlib, no hace falta instalar nada."""
 
 import hashlib
 import hmac
@@ -16,17 +8,14 @@ from abc import ABC, abstractmethod
 
 class PasswordHasher(ABC):
     @abstractmethod
-    def hash(self, contrasena: str) -> str:
-        """Devuelve el hash que se guarda en la base de datos."""
+    def hash(self, contrasena: str) -> str: ...
 
     @abstractmethod
-    def verificar(self, contrasena: str, hash_guardado: str) -> bool:
-        """Indica si la contraseña corresponde al hash guardado."""
+    def verificar(self, contrasena: str, hash_guardado: str) -> bool: ...
 
 
 class ScryptPasswordHasher(PasswordHasher):
-    """Formato guardado: scrypt$n$r$p$sal_hex$clave_hex"""
-
+    # se guarda como: scrypt$n$r$p$sal$clave
     ALGORITMO = "scrypt"
     MEMORIA_MAXIMA = 64 * 1024 * 1024
 

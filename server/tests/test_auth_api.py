@@ -1,5 +1,3 @@
-"""Pruebas de integración del endpoint POST /auth/registro (US-01, AB#47)."""
-
 import pytest
 from fastapi.testclient import TestClient
 

@@ -1,5 +1,3 @@
-"""Pruebas de las validaciones del formulario de registro (US-01, AB#47)."""
-
 import pytest
 
 from src.validaciones import validar_registro

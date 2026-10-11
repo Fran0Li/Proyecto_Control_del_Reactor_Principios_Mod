@@ -1,11 +1,4 @@
-"""Servicio de registro de usuarios (US-01).
-
-Reglas que aplica:
-- RN-01: un correo solo puede pertenecer a un jugador.
-- El nombre de usuario es único.
-- La contraseña se guarda hasheada (RNF-03).
-- La cuenta nace pendiente de verificación; US-02 la marca como verificada.
-"""
+"""Registro de usuarios (US-01)."""
 
 from sqlalchemy.exc import IntegrityError
 
@@ -15,15 +8,15 @@ from app.repositories import UsuarioRepository
 
 
 class RegistroError(Exception):
-    """No se pudo registrar al usuario porque sus datos chocan con otra cuenta."""
+    pass
 
 
 class NombreUsuarioDuplicadoError(RegistroError):
-    """Ya existe una cuenta con ese nombre de usuario."""
+    pass
 
 
 class CorreoDuplicadoError(RegistroError):
-    """RN-01: ya existe una cuenta con ese correo."""
+    """RN-01: un correo solo puede ser de un jugador."""
 
 
 class RegistroService:
@@ -43,12 +36,11 @@ class RegistroService:
         usuario = Usuario(
             nombre_usuario=nombre_usuario,
             correo=correo,
-            correo_verificado=False,
+            correo_verificado=False,  # se verifica en US-02
             contrasena_hash=self.hasher.hash(contrasena),
         )
         try:
             return self.repo.crear(usuario)
         except IntegrityError as error:
-            # Dos registros simultáneos con los mismos datos: la restricción UNIQUE
-            # de la base de datos detiene al segundo.
+            # por si dos personas se registran al mismo tiempo con el mismo correo
             raise RegistroError("El nombre de usuario o el correo ya están registrados") from error

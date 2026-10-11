@@ -19,7 +19,7 @@ def _mensaje_de_error(respuesta: requests.Response) -> str:
     detalle = datos.get("detail") if isinstance(datos, dict) else None
     if isinstance(detalle, str):
         return detalle
-    # Errores de validación de FastAPI (422): lista de {"msg": ...}
+    # los 422 de FastAPI vienen como lista
     if isinstance(detalle, list) and detalle and isinstance(detalle[0], dict):
         mensaje = str(detalle[0].get("msg", ""))
         return mensaje.removeprefix("Value error, ") or f"Error {respuesta.status_code}"

@@ -1,6 +1,7 @@
 """Cliente pygame de Control del Reactor (esqueleto).
 
-Por ahora abre la ventana, muestra si el backend responde y el lobby.
+Abre la ventana en la pantalla de registro (US-01), desde donde se pasa al lobby.
+Abajo muestra si el backend responde.
 """
 
 import pygame
@@ -8,6 +9,7 @@ import requests
 
 from src.config import FPS, SERVER_URL, WINDOW_SIZE
 from src.screens.lobby import LobbyScreen
+from src.screens.registro import RegistroScreen
 
 
 def server_status() -> str:
@@ -24,7 +26,9 @@ def main() -> None:
     pygame.display.set_caption("Control del Reactor")
     clock = pygame.time.Clock()
     text_font = pygame.font.Font(None, 32)
+    registro = RegistroScreen(WINDOW_SIZE[0])
     lobby = LobbyScreen(WINDOW_SIZE[0])
+    pantalla = registro
     status = server_status()
 
     running = True
@@ -32,12 +36,15 @@ def main() -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                status = server_status()  # R para volver a probar la conexión
-            lobby.handle_event(event)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
+                status = server_status()  # F5 para volver a probar la conexión
+            pantalla.handle_event(event)
 
-        lobby.draw(screen)
-        info = text_font.render(f"{status}  (R para reintentar)", True, (200, 200, 200))
+        if pantalla is registro and registro.siguiente_pantalla == "lobby":
+            pantalla = lobby
+
+        pantalla.draw(screen)
+        info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))
         screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
         pygame.display.flip()
         clock.tick(FPS)

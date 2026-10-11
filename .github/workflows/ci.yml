@@ -61,3 +61,51 @@ jobs:
       - uses: actions/checkout@v4
       - name: Construir imagen del backend
         run: docker build -t control-del-reactor-server ./server
+
+  cliente:
+    name: Lint y pruebas del cliente
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    env:
+      SDL_VIDEODRIVER: dummy  # sin pantalla en el servidor de CI
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: client/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pytest==8.* ruff==0.8.*
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Pruebas (pytest)
+        run: pytest
+
+  firmware:
+    name: Firmware del control
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar para Arduino Uno
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: arduino:avr:uno
+          sketch-paths: |
+            - hardware/firmware/control_reactor
+
+      - name: Pruebas en la PC (5 botones)
+        working-directory: hardware/firmware/pruebas
+        run: g++ -std=c++17 -Wall -Wextra -Werror prueba_firmware.cpp -o prueba && ./prueba
+
+      - name: Pruebas en la PC (joystick)
+        working-directory: hardware/firmware/pruebas
+        run: g++ -std=c++17 -Wall -Wextra -Werror -DUSAR_JOYSTICK=1 prueba_firmware.cpp -o prueba && ./prueba

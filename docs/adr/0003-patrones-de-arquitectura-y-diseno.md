@@ -54,6 +54,11 @@ devuelve códigos HTTP.
   servicios se prueban sin levantar el servidor.
 - **Consecuencia:** hay más archivos por historia (ruta, servicio, repositorio), pero cada uno es
   corto y tiene una sola razón para cambiar.
+- **Alternativa descartada:** el ERS del Sprint 1 proponía microservicios (autenticación, servidor
+  de juego, ranking y gateway de hardware) detrás de un balanceador. Para un equipo de tres personas
+  eso multiplica despliegues, configuraciones y pruebas de integración sin una necesidad real de
+  escalar por separado. Se elige un solo backend en capas (monolito modular); si más adelante hace
+  falta, los módulos `auth`, `partidas` y `realtime` ya están separados.
 
 ### Repository
 

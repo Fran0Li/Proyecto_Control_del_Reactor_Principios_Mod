@@ -13,8 +13,9 @@ ESCENARIOS = (
 )
 TIEMPO_LIMITE_SEGUNDOS = 300
 PUNTUACION_OBJETIVO = 500
+MAX_JUGADORES = 4
 
-
+    
 class PartidaFactory:
     def crear(self, escenario: str | None = None) -> Partida:
         if escenario is not None and escenario not in ESCENARIOS:

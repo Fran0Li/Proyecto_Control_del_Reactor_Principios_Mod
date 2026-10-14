@@ -8,7 +8,13 @@ from sqlalchemy.orm import Session
 from app.db.session import get_session
 from app.models.partida import EstadoPartida
 from app.repositories import PartidaRepository, UsuarioRepository
-from app.services.partida_service import JugadorYaEnPartidaError, PartidaService
+from app.services.partida_service import (
+    JugadorYaEnPartidaError,
+    PartidaLlenaError,
+    PartidaNoDisponibleError,
+    PartidaNoEncontradaError,
+    PartidaService,
+)
 
 router = APIRouter(prefix="/partidas", tags=["partidas"])
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -62,3 +68,34 @@ def crear_partida(datos: CrearPartidaRequest, db: SessionDep):
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+
+
+
+class UnirsePartidaRequest(BaseModel):
+    jugador_id: int
+
+
+@router.post("/{partida_id}/unirse", response_model=PartidaDisponibleResponse)
+def unirse_a_partida(partida_id: int, datos: UnirsePartidaRequest, db: SessionDep):
+    if UsuarioRepository(db).obtener_por_id(datos.jugador_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Jugador no encontrado")
+
+    servicio = PartidaService(PartidaRepository(db))
+    try:
+        partida, jugadores = servicio.unirse_a_partida(partida_id, datos.jugador_id)
+    except PartidaNoEncontradaError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    except (
+        JugadorYaEnPartidaError,
+        PartidaNoDisponibleError,
+        PartidaLlenaError,
+    ) as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+
+    return PartidaDisponibleResponse(
+        id=partida.id,
+        escenario=partida.escenario,
+        jugadores=jugadores,
+        tiempo_limite_segundos=partida.tiempo_limite_segundos,
+        puntuacion_objetivo=partida.puntuacion_objetivo,
+    )

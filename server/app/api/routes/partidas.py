@@ -28,6 +28,27 @@ class PartidaResponse(BaseModel):
     tiempo_limite_segundos: int
     puntuacion_objetivo: int
 
+class PartidaDisponibleResponse(BaseModel):
+    id: int
+    escenario: str
+    jugadores: int
+    tiempo_limite_segundos: int
+    puntuacion_objetivo: int
+
+
+@router.get("", response_model=list[PartidaDisponibleResponse])
+def listar_partidas_disponibles(db: SessionDep):
+    servicio = PartidaService(PartidaRepository(db))
+    return [
+        PartidaDisponibleResponse(
+            id=partida.id,
+            escenario=partida.escenario,
+            jugadores=jugadores,
+            tiempo_limite_segundos=partida.tiempo_limite_segundos,
+            puntuacion_objetivo=partida.puntuacion_objetivo,
+        )
+        for partida, jugadores in servicio.listar_disponibles()
+    ]
 
 @router.post("", response_model=PartidaResponse, status_code=status.HTTP_201_CREATED)
 def crear_partida(datos: CrearPartidaRequest, db: SessionDep):

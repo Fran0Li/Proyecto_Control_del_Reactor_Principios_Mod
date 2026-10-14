@@ -51,10 +51,19 @@ class PartidaRepository:
         consulta = (
             select(func.count())
             .select_from(Participacion)
-            .where(Participacion.partida_id == partida_id)
+            .where(Participacion.partida_id == partida_id) 
         )
         return self.db.scalar(consulta) or 0
-
+    def listar_disponibles_con_jugadores(self) -> list[tuple[Partida, int]]:
+        consulta = (
+            select(Partida, func.count(Participacion.id))
+            .outerjoin(Participacion, Participacion.partida_id == Partida.id)
+            .where(Partida.estado == EstadoPartida.esperando)
+            .group_by(Partida.id)
+            .order_by(Partida.id)
+        )
+        return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+    
     def jugador_en_partida_activa(self, jugador_id: int) -> bool:
         """Sirve para validar RN-04: un jugador no puede estar en dos partidas a la vez."""
         consulta = (

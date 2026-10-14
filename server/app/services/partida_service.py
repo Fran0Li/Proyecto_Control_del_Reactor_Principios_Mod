@@ -30,3 +30,6 @@ class PartidaService:
         partida = self.repo.crear(self.factory.crear(escenario))
         self.repo.agregar_participante(partida.id, creador_id)
         return partida
+    def listar_disponibles(self) -> list[tuple[Partida, int]]:
+        """Partidas esperando jugadores, junto con cuántos hay dentro."""
+        return self.repo.listar_disponibles_con_jugadores()

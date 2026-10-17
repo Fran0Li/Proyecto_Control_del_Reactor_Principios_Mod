@@ -64,3 +64,5 @@ class PartidaService:
             raise PartidaLlenaError(f"La partida {partida_id} está llena")
         self.repo.agregar_participante(partida_id, jugador_id)
         return partida, self.repo.contar_participantes(partida_id)
+    def es_participante(self, partida_id: int, jugador_id: int) -> bool:
+        return self.repo.es_participante(partida_id, jugador_id)

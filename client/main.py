@@ -48,14 +48,14 @@ async def main() -> None:
 
         if pantalla is registro and registro.siguiente_pantalla == "lobby":
             pantalla = lobby
-
+        lobby.update()
         pantalla.draw(screen)
         info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))
         screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
         pygame.display.flip()
         clock.tick(FPS)
         await asyncio.sleep(0)  # obligatorio en pygbag: le devuelve el control al navegador
-
+    lobby.cerrar()
     pygame.quit()
 
 

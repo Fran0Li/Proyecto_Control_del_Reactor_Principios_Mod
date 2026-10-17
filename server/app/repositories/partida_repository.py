@@ -63,6 +63,13 @@ class PartidaRepository:
             .order_by(Partida.id)
         )
         return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+    def es_participante(self, partida_id: int, jugador_id: int) -> bool:
+        consulta = (
+            select(Participacion.id)
+            .where(Participacion.partida_id == partida_id)
+            .where(Participacion.jugador_id == jugador_id)
+        )
+        return self.db.scalars(consulta).first() is not None
     
     def jugador_en_partida_activa(self, jugador_id: int) -> bool:
         """Sirve para validar RN-04: un jugador no puede estar en dos partidas a la vez."""

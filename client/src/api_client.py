@@ -3,6 +3,7 @@
 Todas las funciones son `async`: se usan con `await` desde una tarea (ver las pantallas), así la
 ventana no se congela mientras responde el servidor y el mismo código corre en el navegador.
 """
+from typing import Any  
 
 from src.config import SERVER_URL
 from src.red import ErrorDeRed, Respuesta, solicitar
@@ -24,7 +25,7 @@ def _mensaje_de_error(respuesta: Respuesta) -> str:
     return f"Error {respuesta.estado}"
 
 
-async def _enviar(metodo: str, ruta: str, cuerpo: dict | None = None) -> dict:
+async def _enviar(metodo: str, ruta: str, cuerpo: dict | None = None) -> Any:
     try:
         respuesta = await solicitar(metodo, f"{SERVER_URL}{ruta}", cuerpo)
     except ErrorDeRed as error:
@@ -45,6 +46,13 @@ async def registrar_usuario(nombre_usuario: str, correo: str, contrasena: str) -
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
     return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
 
+async def listar_partidas_disponibles() -> list[dict]:
+    datos = await _enviar("GET", "/partidas")
+    return datos if isinstance(datos, list) else []
+
+
+async def unirse_a_partida(partida_id: int, jugador_id: int) -> dict:
+    return await _enviar("POST", f"/partidas/{partida_id}/unirse", {"jugador_id": jugador_id})
 
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""

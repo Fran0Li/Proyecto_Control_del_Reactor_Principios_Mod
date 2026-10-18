@@ -19,3 +19,5 @@ def _servidor_por_defecto() -> str:
 SERVER_URL = os.getenv("SERVER_URL") or _servidor_por_defecto()
 WINDOW_SIZE = (960, 640)
 FPS = 60
+# Temporal: mientras no exista el login (US-03), el jugador sale del entorno.
+JUGADOR_ID = int(os.getenv("JUGADOR_ID", "1"))

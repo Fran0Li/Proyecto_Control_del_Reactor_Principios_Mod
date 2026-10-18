@@ -3,7 +3,7 @@
 Todas las funciones son `async`: se usan con `await` desde una tarea (ver las pantallas), así la
 ventana no se congela mientras responde el servidor y el mismo código corre en el navegador.
 """
-from typing import Any  
+from typing import Any
 
 from src.config import SERVER_URL
 from src.red import ErrorDeRed, Respuesta, solicitar

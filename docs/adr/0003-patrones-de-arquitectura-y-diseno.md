@@ -1,7 +1,7 @@
 # ADR 0003: Patrones de arquitectura y de diseño
 
 - **Estado:** Aceptado
-- **Fecha:** 2026-10-11
+- **Fecha:** 2026-10-11 (actualizado el 2026-10-18 con los drivers y el canal en tiempo real)
 - **Relacionado:** ADR 0001 (stack), ADR 0002 (cliente móvil), `docs/contrato-api-hardware.md`,
   `docs/arquitectura/`
 
@@ -9,27 +9,50 @@
 
 El Sprint 2 pide seleccionar y justificar los patrones de arquitectura y de diseño del producto,
 con al menos un patrón creacional, uno estructural y uno de comportamiento. Parte de ellos ya está
-en el código de `develop`; este ADR los deja documentados y define el que falta.
+en el código de `develop`; este ADR los deja documentados y define el que falta. Los nombres de
+los patrones de arquitectura siguen los del curso (Tema 4: cliente-servidor, capas, publicar-suscribir,
+monolito frente a microservicios).
+
+## Drivers arquitectónicos
+
+Los requisitos que más pesan en la arquitectura y la decisión que responde a cada uno:
+
+| Driver | Origen | Decisión |
+| --- | --- | --- |
+| Movimientos reflejados en menos de 500 ms | RNF-02 | Canal WebSocket por partida y servidor autoritativo; medido: 33 ms en el celular (ADR 0002) |
+| Al menos dos jugadores simultáneos | RNF-01 | Publicar-suscribir: cada mensaje del servidor llega a todos los jugadores de la partida |
+| Computadora y celular | RNF-07 | Un solo cliente pygame, compilado con pygbag para el navegador (ADR 0002) |
+| Control físico de 5 botones | RNF-10 | Arduino por USB Serial a la PC del jugador; Adapter para que el resto del cliente no note la diferencia |
+| Agregar funcionalidades sin rehacer lo existente | RNF-06 | Capas, Repository, Factory y Observer: lo nuevo se agrega como clase nueva |
+| Contenedores, base de datos y nube | RNF-05, RNF-09, RNF-11 | Backend y PostgreSQL en Docker Compose; la misma imagen sirve para la nube |
+| Equipo de tres personas, sprints de un mes | Restricción del proyecto | Un solo backend (monolito modular) en vez de microservicios |
 
 ## Resumen
 
 | Patrón | Tipo | Dónde | Estado |
 | --- | --- | --- | --- |
-| Cliente-servidor con servidor autoritativo | Arquitectura | Cliente pygame ↔ backend FastAPI | REST implementado; tiempo real con US-08 y US-25 |
-| Arquitectura en capas | Arquitectura | `server/app/`: `api` → `services` → `repositories` → `models` | Implementado |
+| Cliente-servidor de 3 niveles, cliente delgado | Arquitectura | Cliente pygame ↔ backend FastAPI ↔ PostgreSQL | REST y canal WebSocket implementados; movimiento con US-25 |
+| Arquitectura en capas (monolito modular) | Arquitectura | `server/app/`: `api` → `services` → `repositories` → `models` | Implementado |
+| Publicar-suscribir | Arquitectura | Canal WebSocket de cada partida (`ConnectionManager`) | Implementado (US-08) |
 | Repository | Acceso a datos | `UsuarioRepository`, `PartidaRepository` | Implementado |
 | **Factory** | **Creacional** | `PartidaFactory` | Implementado (US-07) |
 | **Adapter** | **Estructural** | `FuenteEntrada` y sus fuentes (serial, simulador, teclado, táctil) | Implementado para serial y simulador; teclado y táctil en el prototipo móvil |
-| **Observer** | **Comportamiento** | Motor de partida → WebSocket, eventos y ranking | Aceptado; se implementa con US-25 |
+| **Observer** | **Comportamiento** | Motor de partida → WebSocket, eventos y ranking | Canal listo (US-08); el motor se implementa con US-25 |
 | Strategy | Comportamiento | Movimiento de los guardianes | Propuesto para el Sprint 3 |
 | State | Comportamiento | Estados del jugador (activo, escudado, aturdido, eliminado) | Propuesto para el Sprint 3 |
 
 ## Patrones de arquitectura
 
-### Cliente-servidor con servidor autoritativo
+### Cliente-servidor de 3 niveles con cliente delgado
 
-El cliente (pygame en escritorio o pygbag en el navegador) solo dibuja y envía entradas. El
-servidor decide el movimiento, las colisiones, los puntajes y el ganador.
+| Nivel | Qué corre | Dónde |
+| --- | --- | --- |
+| Presentación | Cliente pygame: pantallas, entradas y dibujo de la arena | PC del jugador o navegador del celular |
+| Lógica | Backend FastAPI: reglas, partidas y canal en tiempo real | Contenedor `server` |
+| Datos | PostgreSQL | Contenedor `db` |
+
+El cliente es **delgado**: solo dibuja y envía entradas. El servidor es **autoritativo**: decide el
+movimiento, las colisiones, los puntajes y el ganador.
 
 - **Por qué:** con varios jugadores y varias fuentes de entrada (teclado, táctil, Arduino), una
   sola fuente de verdad evita trampas y estados distintos entre clientes.
@@ -42,7 +65,7 @@ servidor decide el movimiento, las colisiones, los puntajes y el ganador.
 | Capa | Carpeta | Responsabilidad | Ejemplo |
 | --- | --- | --- | --- |
 | API | `api/routes/` | Validar la petición (Pydantic) y traducir errores a códigos HTTP | `auth.py`, `partidas.py` |
-| Tiempo real | `realtime/` | Canal WebSocket de cada partida | Pendiente (US-08) |
+| Tiempo real | `realtime/`, `api/routes/canal_partida.py` | Canal WebSocket de cada partida | `ConnectionManager` (US-08) |
 | Servicios | `services/` | Reglas de negocio (RN-01, RN-04…) | `RegistroService`, `PartidaService` |
 | Repositorios | `repositories/` | Consultas y escrituras en la base de datos | `PartidaRepository` |
 | Modelos | `models/` | Tablas de SQLAlchemy | `Usuario`, `Partida`, `Evento` |
@@ -54,11 +77,45 @@ devuelve códigos HTTP.
   servicios se prueban sin levantar el servidor.
 - **Consecuencia:** hay más archivos por historia (ruta, servicio, repositorio), pero cada uno es
   corto y tiene una sola razón para cambiar.
-- **Alternativa descartada:** el ERS del Sprint 1 proponía microservicios (autenticación, servidor
-  de juego, ranking y gateway de hardware) detrás de un balanceador. Para un equipo de tres personas
-  eso multiplica despliegues, configuraciones y pruebas de integración sin una necesidad real de
-  escalar por separado. Se elige un solo backend en capas (monolito modular); si más adelante hace
-  falta, los módulos `auth`, `partidas` y `realtime` ya están separados.
+- **Monolito modular en vez de microservicios:** el ERS del Sprint 1 proponía microservicios
+  (autenticación, servidor de juego, ranking y gateway de hardware) detrás de un balanceador. Para
+  un equipo de tres personas eso multiplica despliegues, configuraciones y pruebas de integración
+  sin una necesidad real de escalar por separado. Se elige un solo backend en capas; si más adelante
+  hace falta, los módulos `auth`, `partidas` y `realtime` ya están separados.
+
+### Publicar-suscribir en el canal de cada partida
+
+Cada partida tiene un canal (`/ws/partidas/{id}`). Los jugadores se **suscriben** al conectarse y
+el servidor **publica** en el canal con `ConnectionManager.difundir()`: todos los suscriptores
+reciben el mensaje (`jugador_conectado`, `jugador_desconectado` y, con US-25, el estado de la
+partida).
+
+- **Por qué:** cumple RNF-01 y RNF-02 con una sola conexión abierta por jugador, sin que el cliente
+  tenga que preguntar cada cierto tiempo.
+- **Desacoplamiento:** quien publica no conoce a los suscriptores; una conexión caída se descarta
+  sin afectar a los demás.
+- **Límite conocido:** los canales viven en la memoria de un solo proceso del backend. Con varias
+  instancias detrás de un balanceador haría falta un intermediario (patrón Broker, por ejemplo Redis
+  publicar-suscribir). Para el alcance del curso basta una instancia.
+- **Provisional:** mientras no exista el inicio de sesión (US-03), el canal identifica al jugador con
+  `jugador_id` en la URL y solo verifica que participe en la partida. Se reemplaza por el token JWT
+  que define el contrato de hardware (`?token=`).
+- **Código:** `server/app/realtime/connection_manager.py`, `server/app/api/routes/canal_partida.py`;
+  en el cliente, `client/src/realtime_client.py` sobre la interfaz `Conexion` de `client/src/red/`,
+  con una implementación para escritorio y otra para el navegador (ADR 0002).
+
+### Patrones de arquitectura vistos en el curso que no se usan
+
+| Patrón | Por qué no |
+| --- | --- |
+| Microservicios | Ver arriba: más costo de operación que beneficio para tres personas |
+| Orientado a eventos con bus de eventos (EDA) | El juego necesita respuestas inmediatas dentro de una partida; basta publicar-suscribir en memoria, sin un bus aparte |
+| Broker | Solo hay un servidor; se volvería necesario con varias instancias (ver el límite de arriba) |
+| Modelo-Vista-Controlador | El cliente es delgado y no tiene un modelo propio que sincronizar; el estado vive en el servidor |
+| Maestro-esclavo | No hay trabajo que repartir entre nodos de cómputo |
+| Tubería y filtros | No hay un flujo de datos por etapas; la única cadena (Serial → línea → entrada) es pequeña y queda dentro del Adapter |
+| Peer-to-peer | Sin servidor autoritativo cada jugador podría alterar su propio estado |
+| SOA | No hay otros sistemas de la organización con los que integrarse |
 
 ### Repository
 
@@ -221,7 +278,9 @@ class MotorPartida:
   real", que es el centro del juego. Además, `Evento` y `RankingGlobal` ya están en el modelo de
   datos, así que cada uno tiene un observador natural.
 - **Alcance del Sprint 2:** el motor con `NotificadorWebSocket` (posiciones de los jugadores,
-  US-25). `RegistroEventos` y `ActualizadorRanking` se agregan en el Sprint 3 sin tocar el motor.
+  US-25). El canal ya existe (US-08): `NotificadorWebSocket.al_evento()` solo traduce el evento a
+  JSON y llama a `ConnectionManager.difundir()`. `RegistroEventos` y `ActualizadorRanking` se
+  agregan en el Sprint 3 sin tocar el motor.
 - **Reglas:** un observador que falla no detiene la partida (se registra en el log), y ningún
   observador hace trabajo bloqueante dentro del ciclo del motor.
 - **Pruebas:** el motor se prueba con un observador falso que guarda los eventos recibidos, sin
@@ -249,6 +308,8 @@ de lo descrito aquí.
 
 ## Consecuencias
 
+- Los patrones de arquitectura (cliente-servidor de 3 niveles, capas y publicar-suscribir) responden a
+  los drivers de la tabla del inicio.
 - Hay un patrón de cada tipo exigido: Factory (creacional), Adapter (estructural) y Observer (de
   comportamiento). Factory, Adapter y Repository ya están en `develop` con pruebas.
 - El responsable de US-08 y US-25 implementa el motor de partida siguiendo el Observer descrito

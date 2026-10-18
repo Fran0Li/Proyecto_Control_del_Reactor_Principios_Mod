@@ -1,4 +1,4 @@
 pygame-ce==2.5.*  # misma versión que usa pygbag en el navegador (ADR 0002)
 requests==2.32.*
 pyserial==3.5  # control físico (Arduino) y simulador
-websocket-client==1.9.*
+websockets==13.*  # WebSocket de escritorio (ADR 0002); en el navegador se usa el nativo

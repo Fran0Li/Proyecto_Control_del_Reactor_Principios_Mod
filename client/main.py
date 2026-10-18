@@ -1,6 +1,7 @@
 """Cliente pygame de Control del Reactor.
 
-Abre la ventana en la pantalla de registro (US-01), desde donde se pasa al lobby.
+Abre la ventana en la pantalla de registro (US-01), desde donde se pasa al lobby. Del lobby
+se crea una partida (US-07) o se va a buscar una para unirse (US-08).
 Abajo muestra si el backend responde.
 
 El ciclo principal es async (ADR 0002): así el mismo código corre en escritorio
@@ -13,6 +14,7 @@ import pygame
 
 from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
+from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.lobby import LobbyScreen
 from src.screens.registro import RegistroScreen
 
@@ -25,6 +27,7 @@ async def main() -> None:
     text_font = pygame.font.Font(None, 32)
     registro = RegistroScreen(WINDOW_SIZE[0])
     lobby = LobbyScreen(WINDOW_SIZE[0])
+    buscar = BuscarPartidaScreen(WINDOW_SIZE[0])
     pantalla = registro
 
     status = "Servidor: comprobando..."
@@ -48,7 +51,15 @@ async def main() -> None:
 
         if pantalla is registro and registro.siguiente_pantalla == "lobby":
             pantalla = lobby
+        elif pantalla is lobby and lobby.siguiente_pantalla == "buscar":
+            lobby.siguiente_pantalla = None
+            buscar.al_mostrar()
+            pantalla = buscar
+        elif pantalla is buscar and buscar.siguiente_pantalla == "lobby":
+            buscar.siguiente_pantalla = None
+            pantalla = lobby
         lobby.update()
+        buscar.update()
         pantalla.draw(screen)
         info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))
         screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
@@ -56,6 +67,7 @@ async def main() -> None:
         clock.tick(FPS)
         await asyncio.sleep(0)  # obligatorio en pygbag: le devuelve el control al navegador
     lobby.cerrar()
+    buscar.cerrar()
     pygame.quit()
 
 

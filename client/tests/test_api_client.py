@@ -66,3 +66,36 @@ def test_sin_conexion(monkeypatch):
 def test_estado_servidor(monkeypatch, respuesta, error, texto):
     con_respuesta(monkeypatch, respuesta, error)
     assert asyncio.run(api_client.estado_servidor()) == texto
+
+def test_listar_partidas_disponibles(monkeypatch):
+    partidas = [{"id": 1, "escenario": "laboratorio", "jugadores": 2}]
+    llamadas = con_respuesta(monkeypatch, Respuesta(200, partidas))
+    assert asyncio.run(api_client.listar_partidas_disponibles()) == partidas
+    metodo, url, cuerpo = llamadas[0]
+    assert metodo == "GET" and url.endswith("/partidas") and cuerpo is None
+
+
+def test_listar_partidas_con_respuesta_sin_json_devuelve_lista_vacia(monkeypatch):
+    con_respuesta(monkeypatch, Respuesta(200, None))
+    assert asyncio.run(api_client.listar_partidas_disponibles()) == []
+
+
+def test_unirse_a_partida_envia_el_jugador(monkeypatch):
+    llamadas = con_respuesta(monkeypatch, Respuesta(200, {"id": 4, "jugadores": 2}))
+    datos = asyncio.run(api_client.unirse_a_partida(4, 9))
+    assert datos == {"id": 4, "jugadores": 2}
+    metodo, url, cuerpo = llamadas[0]
+    assert metodo == "POST" and url.endswith("/partidas/4/unirse")
+    assert cuerpo == {"jugador_id": 9}
+
+
+def test_unirse_a_partida_llena_muestra_el_detalle_del_servidor(monkeypatch):
+    con_respuesta(monkeypatch, Respuesta(409, {"detail": "La partida 4 está llena"}))
+    with pytest.raises(api_client.ApiError, match="está llena"):
+        asyncio.run(api_client.unirse_a_partida(4, 9))
+
+
+def test_unirse_a_partida_sin_conexion(monkeypatch):
+    con_respuesta(monkeypatch, error=ErrorDeRed("connection refused"))
+    with pytest.raises(api_client.ApiError, match="Sin conexión"):
+        asyncio.run(api_client.unirse_a_partida(4, 9))

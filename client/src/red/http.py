@@ -34,11 +34,15 @@ class Respuesta:
 
 
 async def solicitar(
-    metodo: str, url: str, cuerpo: dict | None = None, timeout: float = TIMEOUT_S
+    metodo: str,
+    url: str,
+    cuerpo: dict | None = None,
+    timeout: float = TIMEOUT_S,
+    headers: dict | None = None,
 ) -> Respuesta:
     if EN_NAVEGADOR:
-        return await _solicitar_navegador(metodo, url, cuerpo, timeout)
-    return await _solicitar_escritorio(metodo, url, cuerpo, timeout)
+        return await _solicitar_navegador(metodo, url, cuerpo, timeout, headers or {})
+    return await _solicitar_escritorio(metodo, url, cuerpo, timeout, headers or {})
 
 
 def _a_json(texto: str) -> Any:
@@ -49,13 +53,13 @@ def _a_json(texto: str) -> Any:
 
 
 async def _solicitar_escritorio(
-    metodo: str, url: str, cuerpo: dict | None, timeout: float
+    metodo: str, url: str, cuerpo: dict | None, timeout: float, headers: dict
 ) -> Respuesta:
     import requests  # solo en escritorio: pygbag no lo trae
 
     def hacer() -> Respuesta:
         try:
-            r = requests.request(metodo, url, json=cuerpo, timeout=timeout)
+            r = requests.request(metodo, url, json=cuerpo, timeout=timeout, headers=headers)
         except requests.RequestException as error:
             raise ErrorDeRed(str(error)) from error
         return Respuesta(r.status_code, _a_json(r.text))
@@ -67,15 +71,15 @@ _ids = itertools.count(1)
 
 
 async def _solicitar_navegador(
-    metodo: str, url: str, cuerpo: dict | None, timeout: float
+    metodo: str, url: str, cuerpo: dict | None, timeout: float, headers: dict
 ) -> Respuesta:
     import platform  # en pygbag da acceso a window
 
     ventana = platform.window
     pid = next(_ids)
-    opciones: dict[str, Any] = {"method": metodo}
+    opciones: dict[str, Any] = {"method": metodo, "headers": dict(headers)}
     if cuerpo is not None:
-        opciones["headers"] = {"Content-Type": "application/json"}
+        opciones["headers"]["Content-Type"] = "application/json"
         opciones["body"] = json.dumps(cuerpo)
 
     ventana.eval(

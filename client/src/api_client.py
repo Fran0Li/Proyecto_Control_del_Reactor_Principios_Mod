@@ -25,9 +25,12 @@ def _mensaje_de_error(respuesta: Respuesta) -> str:
     return f"Error {respuesta.estado}"
 
 
-async def _enviar(metodo: str, ruta: str, cuerpo: dict | None = None) -> Any:
+async def _enviar(
+    metodo: str, ruta: str, cuerpo: dict | None = None, token: str | None = None
+) -> Any:
+    extra = {"headers": {"Authorization": f"Bearer {token}"}} if token else {}
     try:
-        respuesta = await solicitar(metodo, f"{SERVER_URL}{ruta}", cuerpo)
+        respuesta = await solicitar(metodo, f"{SERVER_URL}{ruta}", cuerpo, **extra)
     except ErrorDeRed as error:
         raise ApiError("Sin conexión con el servidor") from error
     if not respuesta.ok:
@@ -41,6 +44,11 @@ async def registrar_usuario(nombre_usuario: str, correo: str, contrasena: str) -
         "/auth/registro",
         {"nombre_usuario": nombre_usuario, "correo": correo, "contrasena": contrasena},
     )
+
+
+async def iniciar_sesion(usuario: str, contrasena: str) -> dict:
+    """Devuelve {"access_token": ..., "usuario": {...}}."""
+    return await _enviar("POST", "/auth/login", {"usuario": usuario, "contrasena": contrasena})
 
 
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:

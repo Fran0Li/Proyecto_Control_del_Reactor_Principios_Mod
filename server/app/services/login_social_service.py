@@ -37,6 +37,11 @@ class LoginSocialService:
 
     def _vincular(self, usuario: Usuario, perfil: PerfilGoogle) -> Usuario:
         """Ya había una cuenta con ese correo: se usa la misma en vez de crear otra (RN-01)."""
+        if not usuario.correo_verificado:
+            # La cuenta la creó alguien que nunca demostró ser dueño del correo; el dueño real
+            # es quien entra con Google, así que esa contraseña deja de servir.
+            usuario.contrasena_hash = None
+            usuario.version_sesion = (usuario.version_sesion or 0) + 1
         usuario.google_id = perfil.google_id
         usuario.correo_verificado = True
         return self.usuarios.guardar(usuario)

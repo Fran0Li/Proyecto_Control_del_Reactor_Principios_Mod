@@ -12,6 +12,10 @@ from src.red import ErrorDeRed, Respuesta, solicitar
 class ApiError(Exception):
     """El servidor respondió con un error o no se pudo contactar."""
 
+    def __init__(self, mensaje: str, estado: int | None = None) -> None:
+        super().__init__(mensaje)
+        self.estado = estado  # código HTTP, o None si no hubo respuesta
+
 
 def _mensaje_de_error(respuesta: Respuesta) -> str:
     datos = respuesta.datos
@@ -34,7 +38,7 @@ async def _enviar(
     except ErrorDeRed as error:
         raise ApiError("Sin conexión con el servidor") from error
     if not respuesta.ok:
-        raise ApiError(_mensaje_de_error(respuesta))
+        raise ApiError(_mensaje_de_error(respuesta), respuesta.estado)
     return respuesta.datos
 
 
@@ -49,6 +53,10 @@ async def registrar_usuario(nombre_usuario: str, correo: str, contrasena: str) -
 async def iniciar_sesion(usuario: str, contrasena: str) -> dict:
     """Devuelve {"access_token": ..., "usuario": {...}}."""
     return await _enviar("POST", "/auth/login", {"usuario": usuario, "contrasena": contrasena})
+
+
+async def reenviar_verificacion(correo: str) -> dict:
+    return await _enviar("POST", "/auth/reenviar-verificacion", {"correo": correo})
 
 
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:

@@ -18,6 +18,7 @@ from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.lobby import LobbyScreen
 from src.screens.login import LoginScreen
 from src.screens.registro import RegistroScreen
+from src.screens.verificar_correo import VerificarCorreoScreen
 
 
 async def main() -> None:
@@ -32,6 +33,7 @@ async def main() -> None:
     pantallas = {
         "login": LoginScreen(WINDOW_SIZE[0]),
         "registro": RegistroScreen(WINDOW_SIZE[0]),
+        "verificar": VerificarCorreoScreen(WINDOW_SIZE[0]),
         "lobby": lobby,
         "buscar": buscar,
     }
@@ -59,6 +61,8 @@ async def main() -> None:
         destino = pantalla.siguiente_pantalla
         if destino:
             pantalla.siguiente_pantalla = None
+            if destino == "verificar":  # el registro o el login le pasan el correo
+                pantallas["verificar"].preparar(pantalla.correo_pendiente)
             pantalla = pantallas[destino]
             if hasattr(pantalla, "al_mostrar"):
                 pantalla.al_mostrar()

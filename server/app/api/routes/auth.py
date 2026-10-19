@@ -10,6 +10,7 @@ from app.repositories import UsuarioRepository
 from app.services.login_service import (
     CorreoNoVerificadoError,
     CredencialesInvalidasError,
+    CuentaBloqueadaError,
     LoginService,
 )
 from app.services.registro_service import RegistroError, RegistroService
@@ -92,6 +93,8 @@ def iniciar_sesion(datos: LoginRequest, db: SessionDep):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error)) from error
     except CorreoNoVerificadoError as error:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(error)) from error
+    except CuentaBloqueadaError as error:
+        raise HTTPException(status.HTTP_423_LOCKED, str(error)) from error
     return SesionResponse(access_token=token, usuario=UsuarioResponse.model_validate(usuario))
 
 

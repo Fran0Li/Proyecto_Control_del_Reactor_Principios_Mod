@@ -76,14 +76,17 @@ class TokenInvalidoError(Exception):
     pass
 
 
-def crear_token_acceso(usuario_id: int) -> str:
+def crear_token_acceso(usuario_id: int, version_sesion: int = 0) -> str:
+    # "ver" permite cerrar todas las sesiones de un usuario subiendo su version_sesion (US-05)
     expira = datetime.now(UTC) + timedelta(hours=HORAS_SESION)
-    return jwt.encode({"sub": str(usuario_id), "exp": expira}, settings.jwt_secret, "HS256")
+    datos = {"sub": str(usuario_id), "ver": version_sesion, "exp": expira}
+    return jwt.encode(datos, settings.jwt_secret, "HS256")
 
 
-def leer_token_acceso(token: str) -> int:
+def leer_token_acceso(token: str) -> tuple[int, int]:
+    """Devuelve (usuario_id, version_sesion)."""
     try:
         datos = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
-        return int(datos["sub"])
+        return int(datos["sub"]), int(datos["ver"])
     except (jwt.InvalidTokenError, KeyError, ValueError) as error:
         raise TokenInvalidoError("La sesión no es válida o ya venció") from error

@@ -31,12 +31,13 @@ def usuario_actual(
     if credenciales is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tenés que iniciar sesión")
     try:
-        usuario_id = leer_token_acceso(credenciales.credentials)
+        usuario_id, version = leer_token_acceso(credenciales.credentials)
     except TokenInvalidoError as error:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error)) from error
 
     usuario = UsuarioRepository(db).obtener_por_id(usuario_id)
-    if usuario is None:
+    # si cambió la contraseña, los tokens anteriores ya no sirven
+    if usuario is None or usuario.version_sesion != version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida o ya venció")
     return usuario
 

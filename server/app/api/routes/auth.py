@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.dependencias import EnviadorDep, SessionDep, UsuarioActual
+from app.api.paginas import pagina_simple
 from app.repositories import TokenRepository, UsuarioRepository
 from app.services.correo import CorreoNoEnviadoError, EnviadorCorreo
 from app.services.login_service import (
@@ -88,27 +89,16 @@ def _verificacion(db: Session, enviador: EnviadorCorreo) -> VerificacionService:
     return VerificacionService(UsuarioRepository(db), TokensDeCorreo(TokenRepository(db)), enviador)
 
 
-def _pagina(titulo: str, texto: str, estado: int = 200) -> HTMLResponse:
-    html = (
-        '<!doctype html><html lang="es"><meta charset="utf-8">'
-        "<title>Control del Reactor</title>"
-        '<body style="font-family:sans-serif;background:#0c1020;color:#e6e6f0;'
-        'text-align:center;padding-top:15vh">'
-        f'<h1 style="color:#50c8ff">{titulo}</h1><p>{texto}</p></body></html>'
-    )
-    return HTMLResponse(html, status_code=estado)
-
-
 @router.get("/verificar", response_class=HTMLResponse)
 def verificar_correo(token: str, db: SessionDep, enviador: EnviadorDep):
     """Lo abre el jugador desde el enlace del correo, por eso responde una página y no JSON."""
     try:
         _verificacion(db, enviador).verificar(token)
     except TokenVencidoError:
-        return _pagina("Enlace vencido", "Pedí un correo nuevo desde el juego.", 400)
+        return pagina_simple("Enlace vencido", "Pedí un correo nuevo desde el juego.", 400)
     except TokenNoValidoError:
-        return _pagina("Enlace no válido", "El enlace no existe o ya se usó.", 400)
-    return _pagina("¡Correo verificado!", "Ya podés volver al juego e iniciar sesión.")
+        return pagina_simple("Enlace no válido", "El enlace no existe o ya se usó.", 400)
+    return pagina_simple("¡Correo verificado!", "Ya podés volver al juego e iniciar sesión.")
 
 
 class ReenviarRequest(BaseModel):

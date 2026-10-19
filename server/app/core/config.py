@@ -21,6 +21,9 @@ class Settings:
     smtp_port: int = int(os.getenv("SMTP_PORT") or 587)
     smtp_user: str = os.getenv("SMTP_USER", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    # Login con Google (US-04). Cómo crearlas: docs/google-oauth.md
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
 
 settings = Settings()

@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, auth_google, canal_partida, health, partidas
+from app.api.routes import auth, auth_google, canal_partida, health, partidas, perfil
 from app.core.config import settings
 
 app = FastAPI(
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 app.include_router(auth.router)  # Rol A: US-01 a US-06
 app.include_router(auth_google.router)  # US-04
+app.include_router(perfil.router)  # US-06
 app.include_router(partidas.router)
 app.include_router(canal_partida.router)
 app.include_router(health.router)

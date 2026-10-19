@@ -18,3 +18,6 @@ class Usuario(Base):
     bloqueado_hasta = Column(DateTime, nullable=True)
     version_sesion = Column(Integer, nullable=False, default=0, server_default="0")
     google_id = Column(String(64), unique=True, nullable=True)
+    # perfil (US-06)
+    descripcion = Column(String(200), nullable=False, default="", server_default="")
+    avatar = Column(String(20), nullable=False, default="azul", server_default="azul")

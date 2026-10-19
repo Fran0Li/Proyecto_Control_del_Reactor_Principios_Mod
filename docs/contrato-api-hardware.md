@@ -112,12 +112,34 @@ Todos los mensajes son JSON con un campo `tipo`.
 
 ### Servidor → cliente
 
-El mensaje de estado de la partida (posiciones de todos los jugadores) lo define US-25. Para
-esta integración solo se agrega el mensaje de error:
+**Estado de la partida** (lo define US-25). El servidor lo envía a todos los jugadores
+conectados a la partida cada vez que algo cambia: alguien entra, alguien sale o alguien se
+mueve. Se envía como máximo cada 50 ms.
+
+```json
+{
+  "tipo": "estado",
+  "jugadores": [{ "jugador_id": 3, "x": 240, "y": 135 }],
+  "arena": { "ancho": 960, "alto": 540, "radio": 20 }
+}
+```
+
+| Campo | Notas |
+| --- | --- |
+| `jugadores` | Uno por jugador conectado, ordenados por `jugador_id`. `x` e `y` son píxeles enteros |
+| `arena` | Tamaño de la arena y radio del jugador, para que el cliente dibuje sin números fijos |
+
+Valores del Sprint 2 (provisionales): arena de 960 × 540 px, velocidad de 120 px/s, jugador de
+radio 20 y 4 puntos de inicio. Solo hay colisión con los límites del mapa.
+
+**Error:**
 
 ```json
 { "tipo": "error", "codigo": "entrada_invalida", "detalle": "control desconocido: saltar" }
 ```
+
+`codigo` puede ser `entrada_invalida` (los campos no cumplen el contrato) o `json_invalido`
+(el mensaje no es JSON).
 
 ### Cómo interpreta el servidor las entradas
 
@@ -185,3 +207,4 @@ local. El cliente lo abre como si fuera un puerto serial, con `socket://localhos
 | Entrada inválida al servidor | `"control": "saltar"` | Respuesta `error` con `entrada_invalida` |
 | Jugador aturdido | Entrada `arriba` | El servidor la ignora |
 | Fuente indistinta | Misma secuencia por teclado y por Serial | Mismo movimiento en el servidor |
+

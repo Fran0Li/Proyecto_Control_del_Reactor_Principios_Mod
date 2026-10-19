@@ -282,12 +282,19 @@ def partida_de_dos(client, db_session):
     assert unirse_por_api(client, partida, beto).status_code == 200
     return partida, ana, beto
 
+def siguiente_evento(canal):
+    """Lee el siguiente aviso de entrada o salida; el estado de la arena (US-25) se ignora."""
+    while True:
+        mensaje = canal.receive_json()
+        if mensaje["tipo"] != "estado":
+            return mensaje
+
 
 def test_canal_avisa_al_jugador_que_entra(client, db_session):
     partida, ana, _ = partida_de_dos(client, db_session)
 
     with client.websocket_connect(url_del_canal(partida, ana)) as canal_ana:
-        assert canal_ana.receive_json() == {
+        assert siguiente_evento(canal_ana) == {
             "tipo": "jugador_conectado",
             "jugador_id": ana,
             "conectados": [ana],
@@ -298,12 +305,12 @@ def test_canal_avisa_a_los_demas_cuando_alguien_entra_y_sale(client, db_session)
     partida, ana, beto = partida_de_dos(client, db_session)
 
     with client.websocket_connect(url_del_canal(partida, ana)) as canal_ana:
-        canal_ana.receive_json()
+        siguiente_evento(canal_ana)
         with client.websocket_connect(url_del_canal(partida, beto)) as canal_beto:
             entrada = {"tipo": "jugador_conectado", "jugador_id": beto, "conectados": [ana, beto]}
-            assert canal_ana.receive_json() == entrada
-            assert canal_beto.receive_json() == entrada
-        assert canal_ana.receive_json() == {
+            assert siguiente_evento(canal_ana) == entrada
+            assert siguiente_evento(canal_beto) == entrada
+        assert siguiente_evento(canal_ana) == {
             "tipo": "jugador_desconectado",
             "jugador_id": beto,
             "conectados": [ana],
@@ -350,11 +357,12 @@ def test_canal_reconexion_cierra_la_conexion_anterior(client, db_session):
     partida, ana, _ = partida_de_dos(client, db_session)
 
     with client.websocket_connect(url_del_canal(partida, ana)) as vieja:
-        vieja.receive_json()
+        siguiente_evento(vieja)
         with client.websocket_connect(url_del_canal(partida, ana)) as nueva:
-            assert nueva.receive_json()["conectados"] == [ana]
+            assert siguiente_evento(nueva)["conectados"] == [ana]
             with pytest.raises(WebSocketDisconnect) as error:
-                vieja.receive_json()
+                while True:  # puede haber avisos de estado antes del cierre
+                    vieja.receive_json()
             assert error.value.code == 1000
 
 
@@ -362,7 +370,7 @@ def test_canal_no_deja_conexiones_abiertas_al_terminar(client, db_session):
     partida, ana, beto = partida_de_dos(client, db_session)
 
     with client.websocket_connect(url_del_canal(partida, ana)) as canal_ana:
-        canal_ana.receive_json()
+        siguiente_evento(canal_ana)
         with client.websocket_connect(url_del_canal(partida, beto)):
             assert manager.conectados(partida) == [ana, beto]
 

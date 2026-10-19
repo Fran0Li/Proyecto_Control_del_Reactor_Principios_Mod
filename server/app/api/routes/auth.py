@@ -1,18 +1,20 @@
 """Endpoints de autenticación (Rol A: US-01 a US-06)."""
 
 import re
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy.orm import Session
 
-from app.db.session import get_session
+from app.api.dependencias import SessionDep, UsuarioActual
 from app.repositories import UsuarioRepository
+from app.services.login_service import (
+    CorreoNoVerificadoError,
+    CredencialesInvalidasError,
+    LoginService,
+)
 from app.services.registro_service import RegistroError, RegistroService
 
 router = APIRouter(prefix="/auth", tags=["autenticación"])
-SessionDep = Annotated[Session, Depends(get_session)]
 
 PATRON_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 
@@ -60,3 +62,39 @@ def registrar(datos: RegistroRequest, db: SessionDep):
         return servicio.registrar(datos.nombre_usuario, datos.correo, datos.contrasena)
     except RegistroError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+
+
+class LoginRequest(BaseModel):
+    usuario: str = Field(min_length=1, max_length=120)  # nombre de usuario o correo
+    contrasena: str = Field(min_length=1, max_length=128)
+
+
+class UsuarioResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre_usuario: str
+    correo: str
+
+
+class SesionResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    usuario: UsuarioResponse
+
+
+@router.post("/login", response_model=SesionResponse)
+def iniciar_sesion(datos: LoginRequest, db: SessionDep):
+    servicio = LoginService(UsuarioRepository(db))
+    try:
+        usuario, token = servicio.iniciar_sesion(datos.usuario, datos.contrasena)
+    except CredencialesInvalidasError as error:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error)) from error
+    except CorreoNoVerificadoError as error:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(error)) from error
+    return SesionResponse(access_token=token, usuario=UsuarioResponse.model_validate(usuario))
+
+
+@router.get("/yo", response_model=UsuarioResponse)
+def usuario_en_sesion(usuario: UsuarioActual):
+    return usuario

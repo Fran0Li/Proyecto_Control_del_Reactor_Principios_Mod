@@ -19,6 +19,11 @@ class UsuarioRepository:
         self.db.refresh(usuario)
         return usuario
 
+    def guardar(self, usuario: Usuario) -> Usuario:
+        self.db.commit()
+        self.db.refresh(usuario)
+        return usuario
+
     def obtener_por_id(self, usuario_id: int) -> Usuario | None:
         return self.db.get(Usuario, usuario_id)
 
@@ -29,6 +34,11 @@ class UsuarioRepository:
     def obtener_por_nombre_usuario(self, nombre_usuario: str) -> Usuario | None:
         consulta = select(Usuario).where(Usuario.nombre_usuario == nombre_usuario)
         return self.db.scalars(consulta).first()
+
+    def obtener_por_nombre_o_correo(self, valor: str) -> Usuario | None:
+        if "@" in valor:
+            return self.obtener_por_correo(valor.lower())
+        return self.obtener_por_nombre_usuario(valor)
 
     def existe_correo(self, correo: str) -> bool:
         return self.obtener_por_correo(correo) is not None

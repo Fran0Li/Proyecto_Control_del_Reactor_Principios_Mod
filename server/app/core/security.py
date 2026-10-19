@@ -1,9 +1,16 @@
-"""Hash de contraseñas (US-01). Se usa scrypt de hashlib, no hace falta instalar nada."""
+"""Hash de contraseñas (US-01) y token de sesión JWT (US-03)."""
 
 import hashlib
 import hmac
 import secrets
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime, timedelta
+
+import jwt
+
+from app.core.config import settings
+
+HORAS_SESION = 12
 
 
 class PasswordHasher(ABC):
@@ -54,3 +61,20 @@ class ScryptPasswordHasher(PasswordHasher):
             maxmem=self.MEMORIA_MAXIMA,
             dklen=largo,
         )
+
+
+class TokenInvalidoError(Exception):
+    pass
+
+
+def crear_token_acceso(usuario_id: int) -> str:
+    expira = datetime.now(UTC) + timedelta(hours=HORAS_SESION)
+    return jwt.encode({"sub": str(usuario_id), "exp": expira}, settings.jwt_secret, "HS256")
+
+
+def leer_token_acceso(token: str) -> int:
+    try:
+        datos = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        return int(datos["sub"])
+    except (jwt.InvalidTokenError, KeyError, ValueError) as error:
+        raise TokenInvalidoError("La sesión no es válida o ya venció") from error

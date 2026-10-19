@@ -11,6 +11,10 @@ def validar_registro(nombre_usuario: str, correo: str, contrasena: str) -> str |
         return "Usuario: 3 a 30 caracteres, solo letras, números y _"
     if not PATRON_CORREO.match(correo.strip()):
         return "El formato del correo no es válido"
+    return validar_contrasena(contrasena)
+
+
+def validar_contrasena(contrasena: str) -> str | None:
     if not 8 <= len(contrasena) <= 128:
         return "La contraseña debe tener entre 8 y 128 caracteres"
     if not (any(c.isalpha() for c in contrasena) and any(c.isdigit() for c in contrasena)):

@@ -59,6 +59,18 @@ async def reenviar_verificacion(correo: str) -> dict:
     return await _enviar("POST", "/auth/reenviar-verificacion", {"correo": correo})
 
 
+async def solicitar_recuperacion(correo: str) -> dict:
+    return await _enviar("POST", "/auth/recuperar", {"correo": correo})
+
+
+async def restablecer_contrasena(correo: str, codigo: str, contrasena: str) -> dict:
+    return await _enviar(
+        "POST",
+        "/auth/restablecer",
+        {"correo": correo, "codigo": codigo, "contrasena": contrasena},
+    )
+
+
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
     return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
 

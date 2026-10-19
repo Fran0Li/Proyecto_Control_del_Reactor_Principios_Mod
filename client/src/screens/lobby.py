@@ -26,6 +26,7 @@ class LobbyScreen:
             color_hover=(60, 75, 115),
         )
         self.boton_salir = boton_secundario(pygame.Rect(width - 190, 20, 170, 40), "Cerrar sesión")
+        self.boton_perfil = boton_secundario(pygame.Rect(width - 370, 20, 170, 40), "Mi perfil")
         self.fuente_titulo = pygame.font.Font(None, 64)
         self.fuente_texto = pygame.font.Font(None, 32)
         self.mensaje = ""
@@ -37,6 +38,9 @@ class LobbyScreen:
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.boton_buscar.fue_presionado(event):
             self.siguiente_pantalla = "buscar"
+            return
+        if self.boton_perfil.fue_presionado(event):
+            self.siguiente_pantalla = "perfil"
             return
         if self.boton_salir.fue_presionado(event):
             sesion.cerrar()
@@ -75,6 +79,7 @@ class LobbyScreen:
         self.boton_crear.draw(screen)
         self.boton_buscar.draw(screen)
         self.boton_salir.draw(screen)
+        self.boton_perfil.draw(screen)
         actual = sesion.actual()
         if actual:
             nombre = self.fuente_texto.render(actual.nombre_usuario, True, (150, 160, 190))

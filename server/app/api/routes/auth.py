@@ -17,6 +17,7 @@ from app.services.login_service import (
     CuentaBloqueadaError,
     LoginService,
 )
+from app.services.recuperacion_service import RecuperacionService
 from app.services.registro_service import RegistroError, RegistroService
 from app.services.tokens_correo import TokenNoValidoError, TokensDeCorreo, TokenVencidoError
 from app.services.verificacion_service import VerificacionService
@@ -25,6 +26,14 @@ router = APIRouter(prefix="/auth", tags=["autenticación"])
 log = logging.getLogger(__name__)
 
 PATRON_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+
+
+def contrasena_segura(valor: str) -> str:
+    tiene_letra = any(caracter.isalpha() for caracter in valor)
+    tiene_numero = any(caracter.isdigit() for caracter in valor)
+    if not (tiene_letra and tiene_numero):
+        raise ValueError("La contraseña debe tener al menos una letra y un número")
+    return valor
 
 
 class RegistroRequest(BaseModel):
@@ -43,11 +52,7 @@ class RegistroRequest(BaseModel):
     @field_validator("contrasena")
     @classmethod
     def validar_contrasena(cls, valor: str) -> str:
-        tiene_letra = any(caracter.isalpha() for caracter in valor)
-        tiene_numero = any(caracter.isdigit() for caracter in valor)
-        if not (tiene_letra and tiene_numero):
-            raise ValueError("La contraseña debe tener al menos una letra y un número")
-        return valor
+        return contrasena_segura(valor)
 
 
 class UsuarioRegistradoResponse(BaseModel):
@@ -157,3 +162,46 @@ def iniciar_sesion(datos: LoginRequest, db: SessionDep):
 @router.get("/yo", response_model=UsuarioResponse)
 def usuario_en_sesion(usuario: UsuarioActual):
     return usuario
+
+
+def _recuperacion(db: Session, enviador: EnviadorCorreo) -> RecuperacionService:
+    return RecuperacionService(UsuarioRepository(db), TokensDeCorreo(TokenRepository(db)), enviador)
+
+
+class RecuperarRequest(BaseModel):
+    correo: str = Field(max_length=120)
+
+
+@router.post("/recuperar", status_code=status.HTTP_202_ACCEPTED)
+def solicitar_recuperacion(datos: RecuperarRequest, db: SessionDep, enviador: EnviadorDep):
+    try:
+        _recuperacion(db, enviador).solicitar(datos.correo)
+    except CorreoNoEnviadoError as error:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "No se pudo enviar el correo, probá más tarde"
+        ) from error
+    return {"detail": "Si el correo está registrado, te mandamos un código"}
+
+
+class RestablecerRequest(BaseModel):
+    correo: str = Field(max_length=120)
+    codigo: str = Field(min_length=1, max_length=20)
+    contrasena: str = Field(min_length=8, max_length=128)
+
+    @field_validator("contrasena")
+    @classmethod
+    def validar_contrasena(cls, valor: str) -> str:
+        return contrasena_segura(valor)
+
+
+@router.post("/restablecer")
+def restablecer_contrasena(datos: RestablecerRequest, db: SessionDep, enviador: EnviadorDep):
+    try:
+        _recuperacion(db, enviador).restablecer(datos.correo, datos.codigo, datos.contrasena)
+    except TokenVencidoError as error:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "El código venció, pedí uno nuevo"
+        ) from error
+    except TokenNoValidoError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El código no es válido") from error
+    return {"detail": "Contraseña cambiada. Ya podés iniciar sesión"}

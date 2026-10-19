@@ -33,10 +33,15 @@ class TokensDeCorreo:
             )
         )
 
-    def usar(self, token: str, tipo: str) -> TokenUsuario:
-        """Marca el token como usado (sin guardar todavía) y lo devuelve."""
+    def usar(self, token: str, tipo: str, usuario_id: int | None = None) -> TokenUsuario:
+        """Marca el token como usado (sin guardar todavía) y lo devuelve.
+
+        Con `usuario_id` además revisa que el token sea de ese usuario.
+        """
         registro = self.repo.buscar(hash_token(token.strip()), tipo)
         if registro is None or registro.usado_en is not None:
+            raise TokenNoValidoError()
+        if usuario_id is not None and registro.usuario_id != usuario_id:
             raise TokenNoValidoError()
         ahora = ahora_utc()
         if registro.expira_en < ahora:

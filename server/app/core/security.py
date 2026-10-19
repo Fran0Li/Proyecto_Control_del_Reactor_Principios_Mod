@@ -68,6 +68,15 @@ def generar_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def generar_codigo(largo: int = 8) -> str:
+    """Código corto para escribir a mano en el juego (recuperar contraseña).
+
+    Sin letras que se confunden (O/0, I/1).
+    """
+    alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alfabeto) for _ in range(largo))
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

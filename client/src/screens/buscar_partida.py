@@ -4,8 +4,8 @@ import asyncio
 
 import pygame
 
+from src import sesion
 from src.api_client import ApiError, listar_partidas_disponibles, unirse_a_partida
-from src.config import JUGADOR_ID
 from src.screens.componentes import Boton
 from src.screens.panel_canal import PanelCanal
 
@@ -98,14 +98,14 @@ class BuscarPartidaScreen:
     async def _unirse(self, partida_id: int) -> None:
         self._mostrar("Uniéndose...", es_error=False)
         try:
-            partida = await unirse_a_partida(partida_id, JUGADOR_ID)
+            partida = await unirse_a_partida(partida_id, sesion.jugador_id())
         except ApiError as error:
             self._mostrar(str(error), es_error=True)
             return
         self.unido_a = partida["id"]
         self.boton_volver.rect.centerx = self.centro_x  # sin "Actualizar", queda al centro
         self._mostrar(f"Te uniste a la partida #{partida['id']}", es_error=False)
-        await self.panel.abrir(partida["id"], JUGADOR_ID)
+        await self.panel.abrir(partida["id"], sesion.jugador_id())
 
     # dibujo
 

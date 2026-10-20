@@ -14,3 +14,5 @@ class Usuario(Base):
     correo_verificado = Column(Boolean, default=False)
     contrasena_hash = Column(String(255), nullable=False)
     fecha_registro = Column(DateTime, default=lambda: datetime.now(UTC))
+    intentos_fallidos = Column(Integer, nullable=False, default=0, server_default="0")
+    bloqueado_hasta = Column(DateTime, nullable=True)

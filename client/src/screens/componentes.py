@@ -79,3 +79,7 @@ class Boton:
         pygame.draw.rect(screen, color, self.rect, border_radius=10)
         etiqueta = self.fuente.render(self.texto, True, (255, 255, 255))
         screen.blit(etiqueta, etiqueta.get_rect(center=self.rect.center))
+
+
+def boton_secundario(rect: pygame.Rect, texto: str) -> Boton:
+    return Boton(rect, texto, color=(40, 50, 80), color_hover=(60, 75, 115))

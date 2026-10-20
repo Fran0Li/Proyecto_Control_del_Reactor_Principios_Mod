@@ -1,6 +1,6 @@
 """Cliente pygame de Control del Reactor.
 
-Abre la ventana en la pantalla de registro (US-01), desde donde se pasa al lobby. Del lobby
+Abre en el login (US-03); desde ahí se crea una cuenta (US-01) o se entra al lobby. Del lobby
 se crea una partida (US-07) o se va a buscar una para unirse (US-08).
 Abajo muestra si el backend responde.
 
@@ -16,6 +16,7 @@ from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
 from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.lobby import LobbyScreen
+from src.screens.login import LoginScreen
 from src.screens.registro import RegistroScreen
 
 
@@ -25,10 +26,16 @@ async def main() -> None:
     pygame.display.set_caption("Control del Reactor")
     clock = pygame.time.Clock()
     text_font = pygame.font.Font(None, 32)
-    registro = RegistroScreen(WINDOW_SIZE[0])
     lobby = LobbyScreen(WINDOW_SIZE[0])
     buscar = BuscarPartidaScreen(WINDOW_SIZE[0])
-    pantalla = registro
+    # cada pantalla pide cambiar poniendo su `siguiente_pantalla` con una de estas claves
+    pantallas = {
+        "login": LoginScreen(WINDOW_SIZE[0]),
+        "registro": RegistroScreen(WINDOW_SIZE[0]),
+        "lobby": lobby,
+        "buscar": buscar,
+    }
+    pantalla = pantallas["login"]
 
     status = "Servidor: comprobando..."
 
@@ -49,15 +56,12 @@ async def main() -> None:
                     tarea_estado = asyncio.create_task(comprobar_servidor())
             pantalla.handle_event(event)
 
-        if pantalla is registro and registro.siguiente_pantalla == "lobby":
-            pantalla = lobby
-        elif pantalla is lobby and lobby.siguiente_pantalla == "buscar":
-            lobby.siguiente_pantalla = None
-            buscar.al_mostrar()
-            pantalla = buscar
-        elif pantalla is buscar and buscar.siguiente_pantalla == "lobby":
-            buscar.siguiente_pantalla = None
-            pantalla = lobby
+        destino = pantalla.siguiente_pantalla
+        if destino:
+            pantalla.siguiente_pantalla = None
+            pantalla = pantallas[destino]
+            if hasattr(pantalla, "al_mostrar"):
+                pantalla.al_mostrar()
         lobby.update()
         buscar.update()
         pantalla.draw(screen)

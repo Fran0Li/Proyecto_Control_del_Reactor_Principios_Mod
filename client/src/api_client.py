@@ -71,6 +71,23 @@ async def restablecer_contrasena(correo: str, codigo: str, contrasena: str) -> d
     )
 
 
+def url_login_google(sesion_id: str) -> str:
+    return f"{SERVER_URL}/auth/google/iniciar?sesion={sesion_id}"
+
+
+async def resultado_login_google(sesion_id: str) -> dict | None:
+    """Lo mismo que el login normal, o None si el jugador todavía no termina en el navegador."""
+    try:
+        respuesta = await solicitar("GET", f"{SERVER_URL}/auth/google/resultado?sesion={sesion_id}")
+    except ErrorDeRed as error:
+        raise ApiError("Sin conexión con el servidor") from error
+    if respuesta.estado == 202:
+        return None
+    if not respuesta.ok:
+        raise ApiError(_mensaje_de_error(respuesta), respuesta.estado)
+    return respuesta.datos
+
+
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
     return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
 

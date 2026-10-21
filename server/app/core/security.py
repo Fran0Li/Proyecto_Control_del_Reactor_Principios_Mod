@@ -18,7 +18,7 @@ class PasswordHasher(ABC):
     def hash(self, contrasena: str) -> str: ...
 
     @abstractmethod
-    def verificar(self, contrasena: str, hash_guardado: str) -> bool: ...
+    def verificar(self, contrasena: str, hash_guardado: str | None) -> bool: ...
 
 
 class ScryptPasswordHasher(PasswordHasher):
@@ -37,7 +37,9 @@ class ScryptPasswordHasher(PasswordHasher):
         clave = self._derivar(contrasena, sal, self.n, self.r, self.p, self.largo_clave)
         return f"{self.ALGORITMO}${self.n}${self.r}${self.p}${sal.hex()}${clave.hex()}"
 
-    def verificar(self, contrasena: str, hash_guardado: str) -> bool:
+    def verificar(self, contrasena: str, hash_guardado: str | None) -> bool:
+        if not hash_guardado:  # cuenta creada con Google, sin contraseña
+            return False
         try:
             algoritmo, n, r, p, sal_hex, clave_hex = hash_guardado.split("$")
             if algoritmo != self.ALGORITMO:

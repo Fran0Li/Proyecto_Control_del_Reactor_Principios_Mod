@@ -62,11 +62,13 @@ class Boton:
         texto: str,
         color: tuple[int, int, int] = (40, 120, 200),
         color_hover: tuple[int, int, int] = (70, 160, 240),
+        color_texto: tuple[int, int, int] = (255, 255, 255),
     ) -> None:
         self.rect = rect
         self.texto = texto
         self.color = color
         self.color_hover = color_hover
+        self.color_texto = color_texto
         self.fuente = pygame.font.Font(None, 32)
 
     def fue_presionado(self, event: pygame.event.Event) -> bool:
@@ -77,7 +79,7 @@ class Boton:
         hover = self.rect.collidepoint(pygame.mouse.get_pos())
         color = self.color_hover if hover else self.color
         pygame.draw.rect(screen, color, self.rect, border_radius=10)
-        etiqueta = self.fuente.render(self.texto, True, (255, 255, 255))
+        etiqueta = self.fuente.render(self.texto, True, self.color_texto)
         screen.blit(etiqueta, etiqueta.get_rect(center=self.rect.center))
 
 

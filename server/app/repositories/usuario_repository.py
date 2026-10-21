@@ -35,6 +35,10 @@ class UsuarioRepository:
         consulta = select(Usuario).where(Usuario.nombre_usuario == nombre_usuario)
         return self.db.scalars(consulta).first()
 
+    def obtener_por_google_id(self, google_id: str) -> Usuario | None:
+        consulta = select(Usuario).where(Usuario.google_id == google_id)
+        return self.db.scalars(consulta).first()
+
     def obtener_por_nombre_o_correo(self, valor: str) -> Usuario | None:
         if "@" in valor:
             return self.obtener_por_correo(valor.lower())

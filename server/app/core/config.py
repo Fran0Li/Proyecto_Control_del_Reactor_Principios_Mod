@@ -14,6 +14,13 @@ class Settings:
     # Orígenes web que pueden llamar a la API (cliente móvil con pygbag). "*" = cualquiera, solo
     # para desarrollo; en la nube poner el dominio del cliente, separados por coma.
     cors_origenes: str = os.getenv("CORS_ORIGENES", "*")
+    # Dirección con la que se arman los enlaces de los correos
+    url_publica: str = os.getenv("URL_PUBLICA", "http://localhost:8000")
+    # Sin SMTP_HOST los correos se muestran en la consola del servidor (para desarrollo)
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT") or 587)
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
 
 
 settings = Settings()

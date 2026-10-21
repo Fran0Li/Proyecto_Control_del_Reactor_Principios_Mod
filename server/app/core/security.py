@@ -63,6 +63,15 @@ class ScryptPasswordHasher(PasswordHasher):
         )
 
 
+def generar_token() -> str:
+    """Token largo para enlaces (verificación de correo)."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 class TokenInvalidoError(Exception):
     pass
 

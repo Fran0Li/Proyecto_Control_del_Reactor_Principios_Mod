@@ -14,6 +14,7 @@ class LoginScreen(PantallaFormulario):
 
     def __init__(self, width: int) -> None:
         super().__init__(width)
+        self.correo_pendiente = ""  # lo usa la pantalla de verificar correo
         self.usuario = self.campo(200, "Usuario o correo")
         self.contrasena = self.campo(280, "Contraseña", oculto=True)
         self.boton_entrar = Boton(self.rect_boton(340), "Entrar")
@@ -38,6 +39,12 @@ class LoginScreen(PantallaFormulario):
         try:
             datos = await iniciar_sesion(self.usuario.texto.strip(), self.contrasena.texto)
         except ApiError as error:
+            if error.estado == 403:  # correo sin verificar
+                texto = self.usuario.texto.strip()
+                self.correo_pendiente = texto if "@" in texto else ""
+                self.mostrar("")
+                self.siguiente_pantalla = "verificar"
+                return
             self.mostrar(str(error), es_error=True)
             return
 

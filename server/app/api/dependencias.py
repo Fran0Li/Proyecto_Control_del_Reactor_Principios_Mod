@@ -10,9 +10,17 @@ from app.core.security import TokenInvalidoError, leer_token_acceso
 from app.db.session import get_session
 from app.models.usuario import Usuario
 from app.repositories import UsuarioRepository
+from app.services.correo import EnviadorCorreo, crear_enviador
 
 SessionDep = Annotated[Session, Depends(get_session)]
 bearer = HTTPBearer(auto_error=False)
+
+
+def get_enviador() -> EnviadorCorreo:
+    return crear_enviador()
+
+
+EnviadorDep = Annotated[EnviadorCorreo, Depends(get_enviador)]
 
 
 def usuario_actual(

@@ -13,6 +13,7 @@ class RegistroScreen(PantallaFormulario):
 
     def __init__(self, width: int) -> None:
         super().__init__(width)
+        self.correo_pendiente = ""  # lo usa la pantalla de verificar correo
         self.usuario = self.campo(150, "Nombre de usuario")
         self.correo = self.campo(225, "Correo electrónico")
         self.contrasena = self.campo(300, "Contraseña", oculto=True)
@@ -48,9 +49,11 @@ class RegistroScreen(PantallaFormulario):
             self.mostrar(str(error_api), es_error=True)
             return
 
-        self.mostrar("Cuenta creada. Revisá tu correo para verificarla.")
-        self.contrasena.texto = ""
-        self.confirmacion.texto = ""
+        self.correo_pendiente = self.correo.texto.strip()
+        for campo in self.campos:
+            campo.texto = ""
+        self.mostrar("")
+        self.siguiente_pantalla = "verificar"
 
     def draw(self, screen: pygame.Surface) -> None:
         self.dibujar_base(screen)

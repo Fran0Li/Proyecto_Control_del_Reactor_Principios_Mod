@@ -28,6 +28,31 @@ El backend tiene que estar corriendo (`docker compose up` en la raíz). Para otr
 En el navegador el cliente llama al backend en la misma IP, puerto 8000. Si Windows pregunta por el
 firewall, permitir redes privadas.
 
+## Controles en la partida
+
+| Plataforma | Fuentes | `origen` en el mensaje |
+| --- | --- | --- |
+| PC | Teclado: flechas o WASD y espacio | `teclado` |
+| PC con control | Teclado y Arduino o simulador, con `CONTROL_PUERTO` | `hardware` o `simulador` |
+| Navegador o celular | Teclado y botones táctiles en pantalla | `teclado` o `tactil` |
+
+```
+CONTROL_PUERTO=COM3 python main.py                       # Arduino por USB
+CONTROL_PUERTO=socket://localhost:7777 python main.py    # simulador (hardware/simulator)
+```
+
+Todas las fuentes implementan `FuenteEntrada` (`src/entrada/`) y `ControlesJugador` envía cada
+cambio al canal de la partida con el mensaje `entrada` del contrato de hardware. La pantalla de
+juego solo hace esto:
+
+```python
+controles = ControlesJugador(crear_fuentes(ancho, alto, CONTROL_PUERTO), canal.enviar)
+controles.procesar(evento)   # por cada evento de pygame
+controles.actualizar()       # una vez por cuadro
+controles.dibujar(pantalla)  # botones táctiles, si hay
+controles.cerrar()           # al salir de la partida
+```
+
 ## Reglas al programar el cliente (ADR 0002)
 
 - **Nada bloqueante.** Nada de `requests`, `time.sleep` ni sockets en las pantallas. Para hablar

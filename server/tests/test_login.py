@@ -49,7 +49,7 @@ def test_login_con_nombre_de_usuario_devuelve_el_token(client, db_session):
     datos = respuesta.json()
     assert datos["token_type"] == "bearer"
     assert datos["usuario"]["nombre_usuario"] == "luis"
-    assert leer_token_acceso(datos["access_token"]) == datos["usuario"]["id"]
+    assert leer_token_acceso(datos["access_token"]) == (datos["usuario"]["id"], 0)
 
 
 def test_login_con_el_correo_en_mayusculas(client, db_session):
@@ -140,7 +140,7 @@ def test_yo_con_token_alterado_devuelve_401(client, db_session):
 
 def test_token_vencido_no_sirve():
     vencido = jwt.encode(
-        {"sub": "1", "exp": datetime.now(UTC) - timedelta(minutes=1)},
+        {"sub": "1", "ver": 0, "exp": datetime.now(UTC) - timedelta(minutes=1)},
         settings.jwt_secret,
         "HS256",
     )
@@ -150,4 +150,4 @@ def test_token_vencido_no_sirve():
 
 
 def test_crear_y_leer_token():
-    assert leer_token_acceso(crear_token_acceso(7)) == 7
+    assert leer_token_acceso(crear_token_acceso(7, 2)) == (7, 2)

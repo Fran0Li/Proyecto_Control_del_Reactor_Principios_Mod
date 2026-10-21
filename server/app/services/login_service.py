@@ -54,7 +54,7 @@ class LoginService:
         usuario.intentos_fallidos = 0
         usuario.bloqueado_hasta = None
         self.repo.guardar(usuario)
-        return usuario, crear_token_acceso(usuario.id)
+        return usuario, crear_token_acceso(usuario.id, usuario.version_sesion)
 
     def _registrar_fallo(self, usuario: Usuario, ahora: datetime) -> bool:
         """Suma un intento fallido. Devuelve True si con este la cuenta quedó bloqueada."""

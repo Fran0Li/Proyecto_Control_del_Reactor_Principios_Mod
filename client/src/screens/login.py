@@ -5,7 +5,7 @@ import pygame
 from src import sesion
 from src.api_client import ApiError, iniciar_sesion
 from src.screens.componentes import Boton, boton_secundario
-from src.screens.formulario import ANCHO_CAMPO, PantallaFormulario
+from src.screens.formulario import PantallaFormulario
 
 
 class LoginScreen(PantallaFormulario):
@@ -19,7 +19,10 @@ class LoginScreen(PantallaFormulario):
         self.contrasena = self.campo(280, "Contraseña", oculto=True)
         self.boton_entrar = Boton(self.rect_boton(340), "Entrar")
         self.boton_registro = boton_secundario(
-            pygame.Rect(self.x_campos, 510, ANCHO_CAMPO, 40), "Crear cuenta"
+            pygame.Rect(self.centro_x - 255, 510, 250, 40), "Crear cuenta"
+        )
+        self.boton_recuperar = boton_secundario(
+            pygame.Rect(self.centro_x + 5, 510, 250, 40), "Olvidé mi clave"
         )
 
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -27,6 +30,8 @@ class LoginScreen(PantallaFormulario):
             self.lanzar(self._entrar)
         elif self.boton_registro.fue_presionado(event):
             self.siguiente_pantalla = "registro"
+        elif self.boton_recuperar.fue_presionado(event):
+            self.siguiente_pantalla = "recuperar"
         else:
             self.manejar_campos(event)
 
@@ -59,3 +64,4 @@ class LoginScreen(PantallaFormulario):
         screen.blit(subtitulo, subtitulo.get_rect(center=(self.centro_x, 120)))
         self.boton_entrar.draw(screen)
         self.boton_registro.draw(screen)
+        self.boton_recuperar.draw(screen)

@@ -1,7 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.participacion import Participacion
+from app.models.ranking import RankingGlobal
 from app.models.usuario import Usuario
 
 
@@ -20,7 +22,11 @@ class UsuarioRepository:
         return usuario
 
     def guardar(self, usuario: Usuario) -> Usuario:
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
         self.db.refresh(usuario)
         return usuario
 
@@ -49,3 +55,14 @@ class UsuarioRepository:
 
     def existe_nombre_usuario(self, nombre_usuario: str) -> bool:
         return self.obtener_por_nombre_usuario(nombre_usuario) is not None
+
+    def estadisticas(self, usuario_id: int) -> dict:
+        partidas = self.db.scalar(
+            select(func.count()).where(Participacion.jugador_id == usuario_id)
+        )
+        ranking = self.db.get(RankingGlobal, usuario_id)
+        return {
+            "partidas_jugadas": partidas or 0,
+            "victorias": (ranking.victorias or 0) if ranking else 0,
+            "puntos_totales": (ranking.puntos_totales or 0) if ranking else 0,
+        }

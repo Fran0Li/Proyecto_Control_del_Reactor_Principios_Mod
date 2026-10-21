@@ -88,6 +88,14 @@ async def resultado_login_google(sesion_id: str) -> dict | None:
     return respuesta.datos
 
 
+async def obtener_perfil(token: str) -> dict:
+    return await _enviar("GET", "/perfil", token=token)
+
+
+async def editar_perfil(token: str, cambios: dict) -> dict:
+    return await _enviar("PATCH", "/perfil", cambios, token=token)
+
+
 async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
     return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
 

@@ -1,7 +1,8 @@
 # ADR 0003: Patrones de arquitectura y de diseño
 
 - **Estado:** Aceptado
-- **Fecha:** 2026-10-11 (actualizado el 2026-10-18 con los drivers y el canal en tiempo real)
+- **Fecha:** 2026-10-11 (actualizado el 2026-10-18 con los drivers y el canal en tiempo real, y el
+  2026-10-20 con el motor de partida y las entradas del jugador)
 - **Relacionado:** ADR 0001 (stack), ADR 0002 (cliente móvil), `docs/contrato-api-hardware.md`,
   `docs/arquitectura/`
 
@@ -31,13 +32,13 @@ Los requisitos que más pesan en la arquitectura y la decisión que responde a c
 
 | Patrón | Tipo | Dónde | Estado |
 | --- | --- | --- | --- |
-| Cliente-servidor de 3 niveles, cliente delgado | Arquitectura | Cliente pygame ↔ backend FastAPI ↔ PostgreSQL | REST y canal WebSocket implementados; movimiento con US-25 |
+| Cliente-servidor de 3 niveles, cliente delgado | Arquitectura | Cliente pygame ↔ backend FastAPI ↔ PostgreSQL | REST, canal WebSocket y movimiento en el servidor implementados; arena del cliente con US-25 |
 | Arquitectura en capas (monolito modular) | Arquitectura | `server/app/`: `api` → `services` → `repositories` → `models` | Implementado |
 | Publicar-suscribir | Arquitectura | Canal WebSocket de cada partida (`ConnectionManager`) | Implementado (US-08) |
 | Repository | Acceso a datos | `UsuarioRepository`, `PartidaRepository` | Implementado |
 | **Factory** | **Creacional** | `PartidaFactory` | Implementado (US-07) |
-| **Adapter** | **Estructural** | `FuenteEntrada` y sus fuentes (serial, simulador, teclado, táctil) | Implementado para serial y simulador; teclado y táctil en el prototipo móvil |
-| **Observer** | **Comportamiento** | Motor de partida → WebSocket, eventos y ranking | Canal listo (US-08); el motor se implementa con US-25 |
+| **Adapter** | **Estructural** | `FuenteEntrada` y sus fuentes (serial, simulador, teclado, táctil) | Implementado: serial, simulador, teclado y táctil (AB#40) |
+| **Observer** | **Comportamiento** | Motor de partida → WebSocket, eventos y ranking | Implementado: `MotorPartida` y `NotificadorWebSocket` (US-25) |
 | Strategy | Comportamiento | Movimiento de los guardianes | Propuesto para el Sprint 3 |
 | State | Comportamiento | Estados del jugador (activo, escudado, aturdido, eliminado) | Propuesto para el Sprint 3 |
 
@@ -199,14 +200,17 @@ classDiagram
     FuenteEntrada <|-- Tactil
 ```
 
-**Código:** `client/src/entrada/base.py` y `client/src/entrada/serial_entrada.py`. `Teclado` y
-`Tactil` están en `prototipos/cliente-movil/entrada.py` y se pasan a `client/src/entrada/`
-junto con la pantalla de juego (US-25).
+**Código:** `client/src/entrada/` (`base.py`, `serial_entrada.py`, `teclado.py`, `tactil.py`).
+`ControlesJugador` (`controles.py`) junta las fuentes y envía cada cambio al canal de la partida con
+el mensaje `entrada` del contrato; `crear_fuentes()` elige las fuentes según la plataforma: táctil
+en el navegador y Arduino o simulador en escritorio si se configura `CONTROL_PUERTO`.
 
 - **Por qué:** agregar un joystick o una placa con WiFi solo agrega un adaptador; el resto del
   cliente y el servidor no cambian (principio abierto/cerrado).
 - **Comprobado:** el prototipo móvil movió jugadores con teclado, táctil y simulador al mismo
-  tiempo (ADR 0002).
+  tiempo (ADR 0002). En el cliente real, 1 s de tecla o de botón del simulador movió al jugador
+  120 px en el servidor, igual a la velocidad del motor; el servidor recibe el mismo mensaje
+  salvo el campo `origen`.
 
 ### Observer (comportamiento): actualizaciones de la partida en tiempo real
 
@@ -234,13 +238,13 @@ classDiagram
         +al_evento(evento)
     }
     class NotificadorWebSocket {
-        envía estado y puntajes a los clientes
+        envía el estado a los clientes
     }
     class RegistroEventos {
-        guarda en la tabla eventos
+        Sprint 3: guarda en la tabla eventos
     }
     class ActualizadorRanking {
-        actualiza ranking_global al finalizar
+        Sprint 3: actualiza ranking_global
     }
     MotorPartida o-- ObservadorPartida : notifica
     ObservadorPartida <|.. NotificadorWebSocket
@@ -248,10 +252,13 @@ classDiagram
     ObservadorPartida <|.. ActualizadorRanking
 ```
 
-Eventos previstos: `estado_actualizado` (posiciones, en cada tick), `puntaje_cambiado`,
-`jugador_aturdido`, `partida_finalizada`.
+Eventos: `estado_actualizado` (posiciones, implementado). Previstos para el Sprint 3:
+`puntaje_cambiado`, `jugador_aturdido` y `partida_finalizada`.
 
-Esqueleto propuesto para `server/app/realtime/`:
+**Código (US-25):** `server/app/realtime/motor_partida.py` (sujeto, un tick cada 50 ms),
+`notificador_websocket.py` (observador que publica con `ConnectionManager.difundir()`),
+`eventos.py` y `gestor_motores.py`, que crea un motor por partida y le suscribe el notificador
+(es quien arma el objeto, así el motor no conoce el WebSocket). Núcleo del sujeto:
 
 ```python
 class ObservadorPartida(Protocol):
@@ -259,18 +266,14 @@ class ObservadorPartida(Protocol):
 
 
 class MotorPartida:
-    def __init__(self, partida_id: int) -> None:
-        self.partida_id = partida_id
-        self._observadores: list[ObservadorPartida] = []
-
     def suscribir(self, observador: ObservadorPartida) -> None:
         self._observadores.append(observador)
 
     async def _notificar(self, evento: EventoPartida) -> None:
-        for observador in self._observadores:
+        for observador in list(self._observadores):
             try:
                 await observador.al_evento(evento)
-            except Exception:
+            except Exception:  # un observador que falla no detiene la partida
                 log.exception("Falló un observador de la partida %s", self.partida_id)
 ```
 
@@ -278,13 +281,12 @@ class MotorPartida:
   real", que es el centro del juego. Además, `Evento` y `RankingGlobal` ya están en el modelo de
   datos, así que cada uno tiene un observador natural.
 - **Alcance del Sprint 2:** el motor con `NotificadorWebSocket` (posiciones de los jugadores,
-  US-25). El canal ya existe (US-08): `NotificadorWebSocket.al_evento()` solo traduce el evento a
-  JSON y llama a `ConnectionManager.difundir()`. `RegistroEventos` y `ActualizadorRanking` se
-  agregan en el Sprint 3 sin tocar el motor.
+  US-25). `RegistroEventos` y `ActualizadorRanking` se agregan en el Sprint 3 suscribiéndolos en
+  `GestorMotores`, sin tocar el motor.
 - **Reglas:** un observador que falla no detiene la partida (se registra en el log), y ningún
   observador hace trabajo bloqueante dentro del ciclo del motor.
 - **Pruebas:** el motor se prueba con un observador falso que guarda los eventos recibidos, sin
-  WebSocket ni base de datos.
+  WebSocket ni base de datos (task de pruebas de movimiento de US-25).
 
 ### Propuestos para el Sprint 3
 
@@ -311,8 +313,8 @@ de lo descrito aquí.
 - Los patrones de arquitectura (cliente-servidor de 3 niveles, capas y publicar-suscribir) responden a
   los drivers de la tabla del inicio.
 - Hay un patrón de cada tipo exigido: Factory (creacional), Adapter (estructural) y Observer (de
-  comportamiento). Factory, Adapter y Repository ya están en `develop` con pruebas.
-- El responsable de US-08 y US-25 implementa el motor de partida siguiendo el Observer descrito
-  aquí.
+  comportamiento). Los cuatro (con Repository) ya están en `develop`.
+- El motor de partida de US-25 sigue el Observer descrito aquí; los observadores del Sprint 3 se
+  agregan sin modificarlo.
 - Los diagramas de componentes, la vista lógica y la de despliegue están en `docs/arquitectura/`
   y reemplazan las vistas del ERS del Sprint 1.

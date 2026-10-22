@@ -35,12 +35,12 @@ class ConexionFalsa(Conexion):
 
 def test_url_del_canal_usa_ws_con_http(monkeypatch):
     monkeypatch.setattr(realtime_client, "SERVER_URL", "http://localhost:8000")
-    assert url_del_canal(3, 7) == "ws://localhost:8000/ws/partidas/3?jugador_id=7"
+    assert url_del_canal(3, "abc.def") == "ws://localhost:8000/ws/partidas/3?token=abc.def"
 
 
 def test_url_del_canal_usa_wss_con_https(monkeypatch):
     monkeypatch.setattr(realtime_client, "SERVER_URL", "https://juego.ejemplo.com")
-    assert url_del_canal(3, 7) == "wss://juego.ejemplo.com/ws/partidas/3?jugador_id=7"
+    assert url_del_canal(3, "abc.def") == "wss://juego.ejemplo.com/ws/partidas/3?token=abc.def"
 
 
 def test_el_canal_pide_la_conexion_con_la_url_correcta():
@@ -51,8 +51,8 @@ def test_el_canal_pide_la_conexion_con_la_url_correcta():
         creadas.append(conexion)
         return conexion
 
-    CanalPartida(3, 7, fabrica=fabrica)
-    assert creadas[0].url.endswith("/ws/partidas/3?jugador_id=7")
+    CanalPartida(3, "abc.def", fabrica=fabrica)
+    assert creadas[0].url.endswith("/ws/partidas/3?token=abc.def")
 
 
 def test_el_canal_refleja_el_estado_de_la_conexion():

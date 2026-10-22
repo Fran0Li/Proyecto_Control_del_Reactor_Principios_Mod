@@ -105,7 +105,7 @@ class BuscarPartidaScreen:
         self.unido_a = partida["id"]
         self.boton_volver.rect.centerx = self.centro_x  # sin "Actualizar", queda al centro
         self._mostrar(f"Te uniste a la partida #{partida['id']}", es_error=False)
-        await self.panel.abrir(partida["id"], sesion.jugador_id())
+        await self.panel.abrir(partida["id"], sesion.token())
 
     # dibujo
 

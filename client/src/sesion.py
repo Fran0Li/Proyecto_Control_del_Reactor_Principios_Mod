@@ -30,6 +30,11 @@ def actual() -> Sesion | None:
     return _actual
 
 
+def token() -> str:
+    """Token de la sesión, o vacío si no hay (el servidor lo rechaza)."""
+    return _actual.token if _actual else ""
+
+
 def jugador_id() -> int:
     # sin sesión (por ejemplo en las pruebas) se usa el JUGADOR_ID del entorno
     return _actual.usuario_id if _actual else JUGADOR_ID

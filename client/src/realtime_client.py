@@ -11,21 +11,20 @@ from src.config import SERVER_URL
 from src.red import Conexion, crear_conexion
 
 
-def url_del_canal(partida_id: int, jugador_id: int) -> str:
+def url_del_canal(partida_id: int, token: str) -> str:
     base = SERVER_URL.replace("http", "ws", 1)  # http -> ws, https -> wss
-    # Provisional: el jugador va en la URL hasta que exista el login con JWT (el contrato
-    # prevé `?token=`).
-    return f"{base}/ws/partidas/{partida_id}?jugador_id={jugador_id}"
+    # el servidor saca al jugador del token de la sesión (contrato de la API de hardware)
+    return f"{base}/ws/partidas/{partida_id}?token={token}"
 
 
 class CanalPartida:
     def __init__(
         self,
         partida_id: int,
-        jugador_id: int,
+        token: str,
         fabrica: Callable[[str], Conexion] = crear_conexion,
     ) -> None:
-        self._conexion = fabrica(url_del_canal(partida_id, jugador_id))
+        self._conexion = fabrica(url_del_canal(partida_id, token))
 
     @property
     def estado(self) -> str:

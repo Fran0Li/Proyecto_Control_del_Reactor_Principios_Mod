@@ -6,6 +6,7 @@ import os
 import pygame
 import pytest
 
+from src import sesion
 from src.api_client import ApiError
 from src.config import JUGADOR_ID
 from src.screens import buscar_partida, lobby, panel_canal
@@ -45,8 +46,8 @@ class PanelFalso:
         self.abierto = None
         self.cerrado = False
 
-    async def abrir(self, partida_id, jugador_id):
-        self.abierto = (partida_id, jugador_id)
+    async def abrir(self, partida_id, token):
+        self.abierto = (partida_id, token)
 
     def update(self):
         pass
@@ -148,7 +149,7 @@ def test_unirse_envia_la_partida_y_el_jugador_y_abre_el_canal(monkeypatch):
     pantalla = asyncio.run(escenario())
     assert servidor.uniones == [(2, JUGADOR_ID)]
     assert pantalla.unido_a == 2
-    assert pantalla.panel.abierto == (2, JUGADOR_ID)
+    assert pantalla.panel.abierto == (2, sesion.token())
     assert "#2" in pantalla.mensaje and not pantalla.mensaje_es_error
 
 
@@ -295,7 +296,7 @@ def test_lobby_crear_partida_muestra_el_resultado_y_abre_el_canal(monkeypatch):
     asyncio.run(escenario())
     assert llamadas == [JUGADOR_ID]
     assert pantalla.mensaje == "Partida #5 creada - escenario: laboratorio"
-    assert pantalla.panel.abierto == (5, JUGADOR_ID)
+    assert pantalla.panel.abierto == (5, sesion.token())
 
 
 def test_lobby_con_error_no_abre_el_canal(monkeypatch):

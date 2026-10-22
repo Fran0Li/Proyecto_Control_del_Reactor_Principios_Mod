@@ -19,10 +19,10 @@ class PanelCanal:
         self.canal: CanalPartida | None = None
         self.conectados: list[int] = []
 
-    async def abrir(self, partida_id: int, jugador_id: int) -> None:
+    async def abrir(self, partida_id: int, token: str) -> None:
         self.cerrar()
         self.conectados = []
-        self.canal = CanalPartida(partida_id, jugador_id)
+        self.canal = CanalPartida(partida_id, token)
         await self.canal.conectar()
 
     def update(self) -> None:

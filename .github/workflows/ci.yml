@@ -6,10 +6,12 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Todos los jobs usan Ubuntu 24.04 fijo: desde el 19/10/2026 "ubuntu-latest" pasó a Ubuntu 26.04,
+# donde la acción de Arduino no encuentra el Python que instala y el job del firmware falla.
 jobs:
   backend:
     name: Lint y pruebas del backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: server
@@ -55,7 +57,7 @@ jobs:
 
   docker:
     name: Build de la imagen Docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: backend
     steps:
       - uses: actions/checkout@v4
@@ -64,7 +66,7 @@ jobs:
 
   cliente:
     name: Lint y pruebas del cliente
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: client
@@ -91,7 +93,7 @@ jobs:
 
   firmware:
     name: Firmware del control
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 

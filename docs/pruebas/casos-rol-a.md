@@ -85,3 +85,15 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`.
 | CP-44 | Nombre ocupado | Existe `ana` | `nombre_usuario=ana` | 409, no cambia | OK | `s/test_perfil.py::test_no_se_puede_usar_un_nombre_ocupado` |
 | CP-45 | Datos inválidos | — | Avatar inexistente, descripción de 201 caracteres | 422 | OK | `s/test_perfil.py::test_datos_invalidos_devuelven_422` |
 | CP-46 | Pantalla de perfil | Sesión iniciada | Abrir, cambiar avatar, guardar | Carga, guarda y actualiza el nombre de la sesión | OK | `c/test_perfil.py` |
+
+## Canal de la partida con el token de sesión (AB#91)
+
+Se agregó después de US-03: el canal WebSocket identifica al jugador con el token de la sesión
+(`?token=<JWT>`) en vez de `jugador_id` en la URL. Sigue la numeración después del Rol B.
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Prueba |
+| --- | --- | --- | --- | --- | --- | --- |
+| CP-126 | Entrar al canal con la sesión | Sesión iniciada y jugador en la partida | `?token=` de la sesión | Se conecta y recibe `jugador_conectado` | OK | `s/test_canal_con_token.py::test_con_el_token_de_la_sesion_entra_al_canal` |
+| CP-127 | Rechazar sin token o con token inválido | Partida creada | Sin token, token inventado, vencido o de una sesión cerrada | El servidor cierra con 1008 | OK | `s/test_canal_con_token.py` (`test_sin_token_se_rechaza`, `test_con_un_token_inventado_se_rechaza`, `test_con_un_token_vencido_se_rechaza`, `test_con_el_token_de_una_sesion_cerrada_se_rechaza`) |
+| CP-128 | Ya no se entra con `jugador_id` | Partida creada | `?jugador_id=` de otro jugador | Se rechaza | OK | `s/test_canal_con_token.py::test_ya_no_se_puede_entrar_poniendo_el_jugador_en_la_url` |
+| CP-129 | El cliente usa el token | Sesión iniciada en el cliente | Crear o unirse a una partida | El canal se abre con el token de la sesión | OK | `c/test_login.py::test_el_canal_de_la_partida_se_abre_con_el_token_de_la_sesion` |

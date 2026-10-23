@@ -36,13 +36,13 @@ a `develop` si algún job falla.
 | Canal con token (AB#91) | 4 | 4 | 0 |
 | US-07 Creación de partida | 12 | 12 | 0 |
 | US-08 Unirse a una partida | 27 | 27 | 0 |
-| US-21 Guardado persistente de datos | 10 | 9 | 1 |
+| US-21 Guardado persistente de datos | 10 | 10 | 0 |
 | US-25 Movimiento por el mapa | 30 | 29 | 1 |
-| CI y contenedores | 7 | 6 | 1 |
+| CI y contenedores | 7 | 7 | 0 |
 | Firmware del control | 6 | 6 | 0 |
 | Lectura del control en el cliente | 12 | 12 | 0 |
 | Red del cliente y versión móvil | 5 | 5 | 0 |
-| **Total** | **159** | **156** | **3** |
+| **Total** | **159** | **158** | **1** |
 
 Por tipo (roles B y C, que lo indican caso por caso): 44 unitarios, 57 de integración y 8 de
 aceptación (un caso cuenta en dos tipos y otro es el lint del CI). Los 50 casos del rol A están automatizados con
@@ -54,6 +54,9 @@ pytest (unitarios y de integración).
   firmware con 5 botones y con joystick.
 - **CI de `develop`:** los 4 jobs en verde en el commit `8f78e6c` (22/10/2026),
   [ejecución en GitHub Actions](https://github.com/Fran0Li/Proyecto_Control_del_Reactor_Principios_Mod/actions/runs/39898321981).
+- **Docker (CP-95 y CP-131, 23/10/2026):** con una base nueva el contenedor aplicó las 6 migraciones
+  solo, `/health/db` respondió y la partida creada siguió disponible después de
+  `docker compose restart server` y de `docker compose down` + `up` (capturas en `evidencias/`).
 - **Para repetirlas:** `pytest` dentro de `server/` y de `client/`; el firmware se prueba con los
   comandos de `hardware/firmware/README.md`.
 
@@ -61,6 +64,4 @@ pytest (unitarios y de integración).
 
 | Caso | Qué falta | Cómo se cierra |
 | --- | --- | --- |
-| CP-95 | Comprobar que los datos sobreviven a un reinicio | `docker compose up`, crear una cuenta y una partida, `docker compose restart server` y ver que siguen |
-| CP-131 | Comprobar `/health/db` con Docker | En la misma sesión que CP-95, abrir `http://localhost:8000/health/db` |
 | CP-125 | Ver el movimiento en pantalla | Depende de la pantalla de la arena (US-25, task 39) |

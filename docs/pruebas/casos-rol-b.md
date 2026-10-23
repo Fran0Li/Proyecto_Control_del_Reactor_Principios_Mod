@@ -78,7 +78,7 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a
 | CP-92 | Guardar participantes | Una partida y dos jugadores | Agregar a ambos | Se cuentan y se listan 2 participaciones | OK | I | `s/test_repositories.py::test_agregar_participante_y_contar` |
 | CP-93 | Registrar las fechas de inicio y fin | Partida nueva | Pasar a `en_curso` y luego a `finalizada` | Se guardan `fecha_inicio` y `fecha_fin` | OK | I | `s/test_repositories.py::test_cambiar_estado_registra_fechas` |
 | CP-94 | Consultar la RN-04 en la base | Jugador en una partida activa | Preguntar si está en una partida activa | Verdadero mientras la partida esté `esperando` o `en_curso`; falso al `finalizar` | OK | I | `s/test_repositories.py::test_jugador_en_partida_activa_rn04` |
-| CP-95 | Los datos sobreviven al reinicio del servidor | Partidas y jugadores guardados, Docker corriendo | `docker compose restart server` | Los mismos datos siguen disponibles | Pendiente | A | Manual: sin ejecutar todavía |
+| CP-95 | Los datos sobreviven al reinicio del servidor | Partidas y jugadores guardados, Docker corriendo | `docker compose restart server`, y luego `docker compose down` + `docker compose up -d` | Los mismos datos siguen disponibles | OK | A | Manual, 23/10/2026: la partida 1 sigue en `GET /partidas` después de los dos reinicios ([antes](evidencias/cp-95-partida-creada.png), [comandos](evidencias/cp-95-restart-down-up.png), [después](evidencias/cp-95-partida-despues-de-down-up.png)) |
 
 ## US-25 Movimiento por el mapa
 
@@ -119,5 +119,4 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a
 
 ## Pendientes
 
-- **CP-95** (Los datos sobreviven al reinicio del servidor): se prueba con `docker compose restart server` y mirando que los datos sigan ahí.
 - **CP-125** (Ver el movimiento en pantalla): depende de la pantalla de la arena, que todavía no existe.

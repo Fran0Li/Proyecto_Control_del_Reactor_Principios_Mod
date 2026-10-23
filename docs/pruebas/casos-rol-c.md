@@ -14,7 +14,7 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`, `fw/` = `hardware/firm
 | ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CP-130 | El servidor responde | Backend corriendo | `GET /health` | 200 `{"status": "ok"}` | OK | I | `s/test_health.py::test_health_responde_ok` |
-| CP-131 | La base de datos responde | `docker compose up` | `GET /health/db` | 200 con `"database": "conectada"` | Pendiente | A | Manual, junto con CP-95 |
+| CP-131 | La base de datos responde | `docker compose up` con una base nueva | `GET /health/db` | Las migraciones se aplican solas y responde 200 con `"database": "conectada"` | OK | A | Manual, 23/10/2026 ([migraciones al arrancar](evidencias/docker-migraciones-al-arrancar.png), [respuesta](evidencias/cp-131-health-db.png)) |
 | CP-132 | El navegador puede llamar a la API | Cliente web en otro puerto | Preflight `OPTIONS` y `GET` con `Origin` | Respuestas con las cabeceras CORS | OK | I | `s/test_cors.py` |
 | CP-133 | Las migraciones crean el esquema en PostgreSQL | Base vacía | `alembic upgrade head` | Termina sin errores | OK | I, CI | Paso "Migraciones (alembic)" del job del backend |
 | CP-134 | Las pruebas del servidor corren contra PostgreSQL | PostgreSQL 16 temporal en el CI | `pytest` con `TEST_DATABASE_URL` | Todas pasan | OK | I, CI | Job "Lint y pruebas del backend" |
@@ -58,7 +58,3 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`, `fw/` = `hardware/firm
 | CP-157 | Servidor caído | Sin servidor | Petición | `ErrorDeRed`, sin romper el cliente | OK | I | `c/test_red_escritorio.py::test_servidor_caido_lanza_error_de_red` |
 | CP-158 | Versión móvil con pygbag | Prototipo servido con pygbag, celular en la misma red | Abrir la página, mover con los botones táctiles | Carga, se conecta por WebSocket, mueve al jugador y no quedan botones pegados; latencia de 33 ms | OK | A | Prueba técnica del 09/10/2026 (ADR 0002) |
 | CP-159 | Teclado y táctil en el cliente real | — | Ver CP-121 a CP-124 | — | OK | U | `c/test_entradas_jugador.py` |
-
-## Pendientes
-
-- **CP-131** (base de datos con Docker): se prueba junto con CP-95 levantando `docker compose up`.

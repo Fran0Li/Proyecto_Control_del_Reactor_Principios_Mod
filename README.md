@@ -37,6 +37,10 @@ docker compose up --build
 - Estado del servidor: http://localhost:8000/health
 - Estado de la base de datos: http://localhost:8000/health/db
 
+Al arrancar, el contenedor `server` aplica solo las migraciones pendientes (`alembic upgrade head`),
+así una base nueva queda con todas las tablas. Los datos viven en el volumen `pgdata`: sobreviven a
+`docker compose restart` y a `docker compose down`; solo `docker compose down -v` los borra.
+
 ## Desarrollo local sin Docker
 
 ```bash

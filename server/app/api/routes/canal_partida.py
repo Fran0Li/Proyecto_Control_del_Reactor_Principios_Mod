@@ -1,12 +1,11 @@
 """Canal en tiempo real de una partida (WebSocket, US-08 y US-25)."""
 
 import json
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
-from app.db.session import get_session
+from app.api.dependencias import SessionDep, usuario_desde_token
+from app.core.security import TokenInvalidoError
 from app.realtime.connection_manager import manager
 from app.realtime.entradas import EntradaInvalida, FiltroEntradas, interpretar_entrada
 from app.realtime.gestor_motores import gestor_motores
@@ -15,8 +14,6 @@ from app.repositories import PartidaRepository
 from app.services.partida_service import PartidaService
 
 router = APIRouter()
-
-SessionDep = Annotated[Session, Depends(get_session)]
 
 
 def _evento(tipo: str, partida_id: int, jugador_id: int) -> dict:
@@ -61,9 +58,17 @@ async def _procesar_mensaje(
 async def canal_partida(
     websocket: WebSocket,
     partida_id: int,
-    jugador_id: int,
     db: SessionDep,
+    token: str = "",
 ) -> None:
+    # el jugador sale del token de la sesión (?token=<JWT>), así nadie se hace pasar por otro
+    try:
+        jugador_id = usuario_desde_token(db, token).id
+    except TokenInvalidoError:
+        db.close()
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     servicio = PartidaService(PartidaRepository(db))
     autorizado = servicio.es_participante(partida_id, jugador_id)
     db.close()  # no retener la conexión a la base mientras dure el WebSocket

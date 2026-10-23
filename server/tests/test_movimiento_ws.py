@@ -6,6 +6,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.security import crear_token_acceso
 from app.db.session import get_session
 from app.main import app
 from app.models.usuario import Usuario
@@ -53,7 +54,7 @@ def partida_de_dos(client, db_session):
 
 
 def url_del_canal(partida_id, jugador_id):
-    return f"/ws/partidas/{partida_id}?jugador_id={jugador_id}"
+    return f"/ws/partidas/{partida_id}?token={crear_token_acceso(jugador_id)}"
 
 
 def recibir(canal, segundos=3.0):

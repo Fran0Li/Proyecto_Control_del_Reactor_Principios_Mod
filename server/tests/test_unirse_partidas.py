@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+from app.core.security import crear_token_acceso
 from app.db.session import get_session
 from app.main import app
 from app.models.partida import EstadoPartida
@@ -273,7 +274,7 @@ def test_unirse_sin_indicar_el_jugador_da_422(client, db_session):
 
 
 def url_del_canal(partida_id, jugador_id):
-    return f"/ws/partidas/{partida_id}?jugador_id={jugador_id}"
+    return f"/ws/partidas/{partida_id}?token={crear_token_acceso(jugador_id)}"
 
 
 def partida_de_dos(client, db_session):

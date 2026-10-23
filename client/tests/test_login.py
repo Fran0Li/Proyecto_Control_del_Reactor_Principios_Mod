@@ -8,6 +8,7 @@ from src import api_client, sesion
 from src.api_client import ApiError
 from src.config import JUGADOR_ID
 from src.red import Respuesta
+from src.screens import lobby as pantalla_lobby
 from src.screens import login
 from src.screens.lobby import LobbyScreen
 from src.screens.login import LoginScreen
@@ -152,3 +153,34 @@ def test_con_token_se_manda_el_header_authorization(monkeypatch):
     asyncio.run(api_client._enviar("GET", "/auth/yo", token="abc"))
 
     assert llamadas == [{"Authorization": "Bearer abc"}]
+
+
+def test_el_canal_de_la_partida_se_abre_con_el_token_de_la_sesion(monkeypatch):
+    sesion.iniciar("token-de-luis", RESPUESTA_LOGIN["usuario"])
+    abiertos = []
+
+    async def crear_partida(creador_id):
+        return {"id": 4, "escenario": "laboratorio"}
+
+    class PanelFalso:
+        async def abrir(self, partida_id, token):
+            abiertos.append((partida_id, token))
+
+        def update(self):
+            pass
+
+        def cerrar(self):
+            pass
+
+    monkeypatch.setattr(pantalla_lobby, "crear_partida", crear_partida)
+    lobby = LobbyScreen(ANCHO)
+    lobby.panel = PanelFalso()
+
+    async def escenario():
+        lobby.handle_event(clic(lobby.boton_crear))
+        while lobby.ocupada():
+            await asyncio.sleep(0)
+
+    asyncio.run(escenario())
+
+    assert abiertos == [(4, "token-de-luis")]

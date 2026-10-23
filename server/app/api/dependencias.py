@@ -23,6 +23,19 @@ def get_enviador() -> EnviadorCorreo:
 EnviadorDep = Annotated[EnviadorCorreo, Depends(get_enviador)]
 
 
+def usuario_desde_token(db: Session, token: str) -> Usuario:
+    """El usuario dueño del token; lanza TokenInvalidoError si no sirve.
+
+    Lo usan los endpoints REST (por el header) y el canal WebSocket (por la URL).
+    """
+    usuario_id, version = leer_token_acceso(token)
+    usuario = UsuarioRepository(db).obtener_por_id(usuario_id)
+    # si cambió la contraseña, los tokens anteriores ya no sirven
+    if usuario is None or usuario.version_sesion != version:
+        raise TokenInvalidoError("La sesión no es válida o ya venció")
+    return usuario
+
+
 def usuario_actual(
     db: SessionDep,
     credenciales: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
@@ -31,15 +44,9 @@ def usuario_actual(
     if credenciales is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tenés que iniciar sesión")
     try:
-        usuario_id, version = leer_token_acceso(credenciales.credentials)
+        return usuario_desde_token(db, credenciales.credentials)
     except TokenInvalidoError as error:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error)) from error
-
-    usuario = UsuarioRepository(db).obtener_por_id(usuario_id)
-    # si cambió la contraseña, los tokens anteriores ya no sirven
-    if usuario is None or usuario.version_sesion != version:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La sesión no es válida o ya venció")
-    return usuario
 
 
 UsuarioActual = Annotated[Usuario, Depends(usuario_actual)]

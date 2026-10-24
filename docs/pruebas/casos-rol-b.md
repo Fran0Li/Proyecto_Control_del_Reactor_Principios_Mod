@@ -7,9 +7,9 @@ pygame sin ventana y el servidor simulado.
 **Tipos:** **U** unitaria (una pieza sola, sin base de datos ni red), **I** integración (varias piezas
 juntas, con la base de datos real o con un servidor real) y **A** aceptación (el juego completo, a mano).
 
-**Resultado obtenido:** todas las pruebas automáticas pasan: 186 del servidor y 148 del cliente, en
+**Resultado obtenido:** todas las pruebas automáticas pasan: 186 del servidor y 166 del cliente, en
 Python 3.12 y 3.14 (en el CI el servidor corre contra PostgreSQL 16). Para repetirlas: `pytest` dentro de
-`server/` y de `client/`. Los casos **Pendiente** esperan a que exista lo que prueban (ver el final).
+`server/` y de `client/`. Los casos de tipo **A** se ejecutaron a mano; su evidencia está en la columna **Prueba** o en la Wiki.
 
 Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a la del Rol A (CP-01 a CP-46).
 
@@ -84,6 +84,8 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a
 
 **Criterios de aceptación (Board):** los controles permiten moverse en 8 direcciones según la tecla que se presione; el jugador se mueve mientras nada lo obstruya (obstáculos o el límite del mapa); el movimiento se ve en pantalla en menos de 500 ms desde que se presiona la tecla y se detiene al soltarla.
 
+**Alcance en este sprint:** solo hay colisión con los límites del mapa; los obstáculos todavía no están implementados.
+
 | ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CP-96 | Moverse en una dirección | Jugador en la arena | `derecha` presionada 1 s (20 ciclos de 50 ms) | Avanza 120 px a la derecha | OK | U | `s/test_motor_partida.py::test_una_direccion_presionada_mueve_al_jugador_a_la_velocidad_del_motor` |
@@ -115,8 +117,13 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a
 | CP-122 | Mensaje de entrada del cliente | — | Cambios de cualquier fuente | Se envía el mensaje `entrada` del contrato con `seq` creciente | OK | U | `c/test_entradas_jugador.py::test_controles_envian_el_mensaje_del_contrato_con_seq_creciente` |
 | CP-123 | Fuente indistinta | — | Misma pulsación por teclado y por el control físico | El servidor recibe el mismo mensaje; solo cambia `origen` | OK | U | `c/test_entradas_jugador.py::test_mismo_mensaje_desde_teclado_y_desde_el_control_fisico` |
 | CP-124 | Botones táctiles | — | Tocar con el mouse o con dos dedos | Presiona y suelta cada botón; dos dedos a la vez no se confunden | OK | U | `c/test_entradas_jugador.py::test_tactil_presiona_y_suelta_con_el_mouse`, `c/test_entradas_jugador.py::test_tactil_dos_dedos_a_la_vez` |
-| CP-125 | Ver el movimiento en pantalla | Dos ventanas con la pantalla de la arena | W, A, S y D en una ventana | El personaje se mueve y se ve en la otra ventana en menos de 500 ms; se detiene al soltar la tecla | Pendiente | A | Manual: falta la pantalla de la arena |
+| CP-125 | Ver el movimiento en pantalla | Dos ventanas con la pantalla de la arena | W, A, S y D en una ventana | El personaje se mueve y se ve en la otra ventana en menos de 500 ms; se detiene al soltar la tecla | OK | A | Manual: la ventana del jugador 1 mueve su círculo rojo con WASD y la del jugador 2 lo ve moverse; al soltar la tecla se detiene ([captura](evidencias/cp-125-dos-ventanas.png)) |
+| CP-126 | La arena dibuja a los jugadores | Panel del canal con el estado de la partida | Estado con dos jugadores | Fondo blanco y un círculo rojo por jugador, en su posición y con el radio que manda el servidor; sin estado o sin canal, solo el fondo y sin errores | OK | U | `c/test_arena.py::test_el_fondo_es_blanco`, `c/test_arena.py::test_dibuja_un_circulo_rojo_por_jugador_en_su_posicion`, `c/test_arena.py::test_el_circulo_tiene_el_radio_que_manda_el_servidor`, `c/test_arena.py::test_sin_estado_solo_hay_fondo_blanco_y_no_falla`, `c/test_arena.py::test_sin_canal_no_falla_ni_manda_teclas` |
+| CP-127 | Movimiento suave en pantalla | Un jugador dibujado | El servidor manda una posición nueva | El círculo se acerca poco a poco y no salta; quien se va deja de dibujarse | OK | U | `c/test_arena.py::test_la_primera_vez_aparece_en_su_lugar_y_despues_se_acerca_sin_saltar`, `c/test_arena.py::test_quien_se_va_deja_de_dibujarse` |
+| CP-128 | Teclas desde la arena | Arena abierta con el canal | Presionar y soltar D | Se envían `entrada` `derecha` con `presionado` y luego `liberado`, con `origen` `teclado` y `seq` creciente | OK | U | `c/test_arena.py::test_las_teclas_se_envian_por_el_canal` |
+| CP-129 | Volver de la arena con Esc | Arena abierta, con una tecla apretada | Esc | Vuelve a la pantalla de origen; se sueltan los 5 controles para que el servidor no siga moviendo al jugador; después no se envía nada más; se puede entrar de nuevo limpio; sin canal también funciona | OK | U | `c/test_arena.py::test_escape_vuelve_a_la_pantalla_de_origen`, `c/test_arena.py::test_al_salir_se_sueltan_todos_los_controles_aunque_haya_una_tecla_apretada`, `c/test_arena.py::test_despues_de_salir_no_se_envia_nada_mas`, `c/test_arena.py::test_volver_a_preparar_empieza_limpio`, `c/test_arena.py::test_sin_canal_escape_tambien_funciona` |
+| CP-130 | Botón "Entrar a la arena" y estado en el panel | Canal abierto | Llegan mensajes `estado`; clic en el botón | El panel guarda el último estado y lo olvida al cerrar; el botón pide entrar a la arena solo si hay canal; el panel puede dibujarse sin el botón | OK | U | `c/test_arena.py::test_el_panel_guarda_el_ultimo_estado_de_la_arena`, `c/test_arena.py::test_el_panel_olvida_el_estado_al_abrir_otro_canal_o_cerrar`, `c/test_arena.py::test_el_boton_de_la_arena_pide_entrar`, `c/test_arena.py::test_sin_canal_el_boton_de_la_arena_no_hace_nada`, `c/test_arena.py::test_el_panel_puede_dibujarse_sin_el_boton` |
 
 ## Pendientes
 
-- **CP-125** (Ver el movimiento en pantalla): depende de la pantalla de la arena, que todavía no existe.
+Ninguno: todos los casos están en OK.

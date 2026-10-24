@@ -14,6 +14,7 @@ import pygame
 
 from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
+from src.screens.arena import ArenaScreen
 from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.lobby import LobbyScreen
 from src.screens.login import LoginScreen
@@ -31,6 +32,7 @@ async def main() -> None:
     text_font = pygame.font.Font(None, 32)
     lobby = LobbyScreen(WINDOW_SIZE[0])
     buscar = BuscarPartidaScreen(WINDOW_SIZE[0])
+    arena = ArenaScreen(*WINDOW_SIZE)
     # cada pantalla pide cambiar poniendo su `siguiente_pantalla` con una de estas claves
     pantallas = {
         "login": LoginScreen(WINDOW_SIZE[0]),
@@ -40,6 +42,7 @@ async def main() -> None:
         "perfil": PerfilScreen(WINDOW_SIZE[0]),
         "lobby": lobby,
         "buscar": buscar,
+        "arena": arena,
     }
     pantalla = pantallas["login"]
 
@@ -61,7 +64,15 @@ async def main() -> None:
                     status = "Servidor: comprobando..."
                     tarea_estado = asyncio.create_task(comprobar_servidor())
             pantalla.handle_event(event)
+            panel = getattr(pantalla, "panel", None)  # el panel tiene el botón de la arena
+            if panel is not None:
+                panel.handle_event(event)
 
+        panel = getattr(pantalla, "panel", None)
+        if panel is not None and panel.quiere_arena:
+            panel.quiere_arena = False
+            arena.preparar(panel, volver_a="lobby" if pantalla is lobby else "buscar")
+            pantalla.siguiente_pantalla = "arena"
         destino = pantalla.siguiente_pantalla
         if destino:
             pantalla.siguiente_pantalla = None
@@ -72,6 +83,7 @@ async def main() -> None:
                 pantalla.al_mostrar()
         lobby.update()
         buscar.update()
+        arena.update()
         pantalla.draw(screen)
         info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))
         screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
@@ -80,6 +92,7 @@ async def main() -> None:
         await asyncio.sleep(0)  # obligatorio en pygbag: le devuelve el control al navegador
     lobby.cerrar()
     buscar.cerrar()
+    arena.cerrar()
     pygame.quit()
 
 

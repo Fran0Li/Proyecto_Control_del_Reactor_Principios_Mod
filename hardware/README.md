@@ -1,9 +1,15 @@
 # Hardware
 
-Control físico de 5 botones: arriba, abajo, izquierda, derecha y acción.
+Control físico con Arduino de 5 botones (arriba, abajo, izquierda, derecha y acción); el firmware
+admite también joystick para más adelante. Se conecta por USB Serial a la computadora del jugador
+y el cliente traduce las señales y las envía al servidor por WebSocket.
 
-- `simulator/`: simulador del control para probar sin el ESP32.
-- `firmware/`: código del ESP32/Arduino (se agrega cuando exista el prototipo).
+| Carpeta | Contenido |
+| --- | --- |
+| `firmware/` | Código del Arduino, instrucciones para Tinkercad y pruebas del firmware en la PC |
+| `simulator/` | Simulador del control: envía los mismos mensajes sin hardware |
 
-El contrato de mensajes y el protocolo (WebSocket, MQTT o Serial) se documentan en
-`docs/adr/` y en la Wiki cuando se definan. Rol C.
+El lado del cliente está en `client/src/entrada/` (`EntradaSerial`), con sus pruebas en
+`client/tests/`.
+
+Mensajes, pines y protocolo: [`docs/contrato-api-hardware.md`](../docs/contrato-api-hardware.md).

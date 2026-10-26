@@ -10,7 +10,7 @@ Proyecto CE-1105 Principios de Modelado en Ingeniería, TEC, II Semestre 2026.
 | `server/` | Backend en FastAPI: API REST, WebSocket del juego y acceso a PostgreSQL |
 | `client/` | Cliente del juego en pygame |
 | `hardware/` | Firmware del control físico y simulador de botones |
-| `docs/` | ADRs, estrategia de ramas y documentación técnica |
+| `docs/` | ADRs, vistas de arquitectura (`docs/arquitectura/`), estrategia de ramas y documentación técnica |
 | `.github/workflows/` | Pipeline de CI (GitHub Actions) |
 
 Dentro de `server/app/` el código va por capas:
@@ -36,6 +36,10 @@ docker compose up --build
 - Documentación interactiva: http://localhost:8000/docs
 - Estado del servidor: http://localhost:8000/health
 - Estado de la base de datos: http://localhost:8000/health/db
+
+Al arrancar, el contenedor `server` aplica solo las migraciones pendientes (`alembic upgrade head`),
+así una base nueva queda con todas las tablas. Los datos viven en el volumen `pgdata`: sobreviven a
+`docker compose restart` y a `docker compose down`; solo `docker compose down -v` los borra.
 
 ## Desarrollo local sin Docker
 

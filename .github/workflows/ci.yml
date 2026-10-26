@@ -6,13 +6,34 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Todos los jobs usan Ubuntu 24.04 fijo: desde el 19/10/2026 "ubuntu-latest" pasó a Ubuntu 26.04,
+# donde la acción de Arduino no encuentra el Python que instala y el job del firmware falla.
 jobs:
   backend:
     name: Lint y pruebas del backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: server
+    # Base de datos temporal solo para el CI (se destruye al terminar el job)
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: reactor
+          POSTGRES_PASSWORD: reactor_ci
+          POSTGRES_DB: reactor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reactor -d reactor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://reactor:reactor_ci@localhost:5432/reactor
+      # Las pruebas de integración usan PostgreSQL (sin esta variable usan SQLite)
+      TEST_DATABASE_URL: postgresql+psycopg://reactor:reactor_ci@localhost:5432/reactor
     steps:
       - uses: actions/checkout@v4
 
@@ -28,14 +49,65 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Migraciones (alembic)
+        run: alembic upgrade head
+
       - name: Pruebas (pytest)
         run: pytest
 
   docker:
     name: Build de la imagen Docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: backend
     steps:
       - uses: actions/checkout@v4
       - name: Construir imagen del backend
         run: docker build -t control-del-reactor-server ./server
+
+  cliente:
+    name: Lint y pruebas del cliente
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: client
+    env:
+      SDL_VIDEODRIVER: dummy  # sin pantalla en el servidor de CI
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: client/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pytest==8.* ruff==0.8.*
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Pruebas (pytest)
+        run: pytest
+
+  firmware:
+    name: Firmware del control
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar para Arduino Uno
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: arduino:avr:uno
+          sketch-paths: |
+            - hardware/firmware/control_reactor
+
+      - name: Pruebas en la PC (5 botones)
+        working-directory: hardware/firmware/pruebas
+        run: g++ -std=c++17 -Wall -Wextra -Werror prueba_firmware.cpp -o prueba && ./prueba
+
+      - name: Pruebas en la PC (joystick)
+        working-directory: hardware/firmware/pruebas
+        run: g++ -std=c++17 -Wall -Wextra -Werror -DUSAR_JOYSTICK=1 prueba_firmware.cpp -o prueba && ./prueba

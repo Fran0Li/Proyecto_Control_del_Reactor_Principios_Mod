@@ -1,17 +1,27 @@
 """Punto de entrada del backend de Control del Reactor."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health
+from app.api.routes import auth, auth_google, canal_partida, health, partidas, perfil
+from app.core.config import settings
 
 app = FastAPI(
     title="Control del Reactor API",
     description="Backend del juego: autenticación, partidas, ranking y tiempo real.",
     version="0.1.0",
 )
-
+# El cliente móvil corre en el navegador (pygbag, ADR 0002) y llama a la API desde otro puerto u
+# origen: sin CORS el navegador bloquea esas peticiones.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in settings.cors_origenes.split(",") if o.strip()],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(auth.router)  # Rol A: US-01 a US-06
+app.include_router(auth_google.router)  # US-04
+app.include_router(perfil.router)  # US-06
+app.include_router(partidas.router)
+app.include_router(canal_partida.router)
 app.include_router(health.router)
-
-# Aquí se irán registrando los routers nuevos, por ejemplo:
-# app.include_router(auth.router)       # Rol A: US-01 a US-06
-# app.include_router(matches.router)    # Rol B: US-07, US-08

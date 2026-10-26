@@ -1,0 +1,68 @@
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.models.participacion import Participacion
+from app.models.ranking import RankingGlobal
+from app.models.usuario import Usuario
+
+
+class UsuarioRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def crear(self, usuario: Usuario) -> Usuario:
+        self.db.add(usuario)
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        self.db.refresh(usuario)
+        return usuario
+
+    def guardar(self, usuario: Usuario) -> Usuario:
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        self.db.refresh(usuario)
+        return usuario
+
+    def obtener_por_id(self, usuario_id: int) -> Usuario | None:
+        return self.db.get(Usuario, usuario_id)
+
+    def obtener_por_correo(self, correo: str) -> Usuario | None:
+        consulta = select(Usuario).where(Usuario.correo == correo)
+        return self.db.scalars(consulta).first()
+
+    def obtener_por_nombre_usuario(self, nombre_usuario: str) -> Usuario | None:
+        consulta = select(Usuario).where(Usuario.nombre_usuario == nombre_usuario)
+        return self.db.scalars(consulta).first()
+
+    def obtener_por_google_id(self, google_id: str) -> Usuario | None:
+        consulta = select(Usuario).where(Usuario.google_id == google_id)
+        return self.db.scalars(consulta).first()
+
+    def obtener_por_nombre_o_correo(self, valor: str) -> Usuario | None:
+        if "@" in valor:
+            return self.obtener_por_correo(valor.lower())
+        return self.obtener_por_nombre_usuario(valor)
+
+    def existe_correo(self, correo: str) -> bool:
+        return self.obtener_por_correo(correo) is not None
+
+    def existe_nombre_usuario(self, nombre_usuario: str) -> bool:
+        return self.obtener_por_nombre_usuario(nombre_usuario) is not None
+
+    def estadisticas(self, usuario_id: int) -> dict:
+        partidas = self.db.scalar(
+            select(func.count()).where(Participacion.jugador_id == usuario_id)
+        )
+        ranking = self.db.get(RankingGlobal, usuario_id)
+        return {
+            "partidas_jugadas": partidas or 0,
+            "victorias": (ranking.victorias or 0) if ranking else 0,
+            "puntos_totales": (ranking.puntos_totales or 0) if ranking else 0,
+        }

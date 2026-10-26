@@ -89,7 +89,7 @@ flowchart LR
 | Rutas REST | Validan las peticiones y traducen errores a códigos HTTP | `server/app/api/routes/` | `auth` (registro, login, verificación y recuperación), `auth_google`, `perfil`, `partidas` (crear, listar y unirse) y `health` |
 | Canal de la partida | WebSocket por partida: verifica que el jugador participe y lo suscribe al canal | `server/app/api/routes/canal_partida.py` | Implementado (US-08) |
 | `ConnectionManager` | Guarda los jugadores conectados a cada partida y les difunde los mensajes (publicar-suscribir) | `server/app/realtime/connection_manager.py` | Implementado (US-08) |
-| `MotorPartida` y `NotificadorWebSocket` | Aplica entradas, mueve jugadores cada 50 ms y avisa a los observadores; el notificador publica el estado en el canal | `server/app/realtime/` | Implementado (US-25; ver ADR 0003) |
+| `MotorPartida` y `NotificadorWebSocket` | Aplica entradas, mueve jugadores cada 50 ms y avisa a los observadores; el notificador publica el estado en el canal | `server/app/realtime/` | Implementado (US-25; ver ADR 0006) |
 | Servicios | Reglas de negocio | `server/app/services/` | Cuenta (registro, login, verificación, recuperación, Google, perfil y correo) y partidas (`PartidaService`, `PartidaFactory`) |
 | `PasswordHasher` | Hash y verificación de contraseñas con scrypt | `server/app/core/security.py` | Implementado |
 | Repositorios | Acceso a datos (Repository) | `server/app/repositories/` | Implementado |

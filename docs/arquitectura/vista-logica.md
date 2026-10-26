@@ -1,7 +1,7 @@
 # Vista lógica
 
 Cómo está organizado el sistema por responsabilidades, independientemente de dónde corre cada
-parte. Los patrones están justificados en el ADR 0003.
+parte. Los patrones están justificados en el ADR 0003 (arquitectura) y en los ADRs 0004 a 0009 (diseño).
 
 ## Capas del sistema
 

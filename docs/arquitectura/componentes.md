@@ -12,7 +12,7 @@ flowchart LR
 
     subgraph CLI["Cliente del juego: pygame-ce en PC, pygbag en el navegador"]
         PANT["Pantallas<br/>login, registro, verificación, perfil,<br/>lobby y buscar partida"]
-        JUEGO["Pantalla de la arena<br/>US-25"]:::plan
+        JUEGO["Pantalla de la arena<br/>US-25"]
         ENT["Fuentes de entrada y ControlesJugador<br/>teclado, táctil, Arduino, simulador<br/>Adapter"]
         APIC["api_client"]
         HTTP["red/http<br/>requests o fetch"]
@@ -82,7 +82,7 @@ flowchart LR
 | Simulador del control | Ventana con los 5 botones que envía las mismas líneas por un socket local | `hardware/simulator/` | Implementado |
 | Fuentes de entrada | Convierten teclado, táctil, Serial y simulador en `(control, estado)` (Adapter); `ControlesJugador` las envía al canal con el mensaje `entrada` | `client/src/entrada/` | Implementado (AB#40) |
 | Pantallas | Login, registro, verificación de correo, recuperación, perfil, lobby y buscar o unirse a partidas; llaman a la API desde tareas async sin congelar la ventana | `client/src/screens/` | Implementado |
-| Pantalla de la arena | Dibuja la arena con el estado que manda el servidor y usa `ControlesJugador` | — | En curso (US-25) |
+| Pantalla de la arena | Dibuja la arena con el estado que manda el servidor y usa `ControlesJugador` | `client/src/screens/arena.py` | Implementado (US-25) |
 | `api_client` | Funciones async por endpoint; traduce errores de la API a mensajes | `client/src/api_client.py` | Implementado |
 | `red/http` | HTTP en escritorio (`requests` en un hilo) y en el navegador (`fetch`) | `client/src/red/http.py` | Implementado |
 | `red/websocket` y `realtime_client` | WebSocket en escritorio y en el navegador, y canal de la partida que usan las pantallas | `client/src/red/websocket.py`, `client/src/realtime_client.py` | Implementado (US-08) |

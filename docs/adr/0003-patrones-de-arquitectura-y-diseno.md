@@ -34,7 +34,7 @@ Los requisitos que más pesan en la arquitectura y la decisión que responde a c
 
 | Patrón | Tipo | Dónde | Estado |
 | --- | --- | --- | --- |
-| Cliente-servidor de 3 niveles, cliente delgado | Arquitectura | Cliente pygame ↔ backend FastAPI ↔ PostgreSQL | REST, canal WebSocket y movimiento en el servidor implementados; arena del cliente con US-25 |
+| Cliente-servidor de 3 niveles, cliente delgado | Arquitectura | Cliente pygame ↔ backend FastAPI ↔ PostgreSQL | Implementado: REST, canal WebSocket, movimiento en el servidor y arena en el cliente |
 | Arquitectura en capas (monolito modular) | Arquitectura | `server/app/`: `api` → `services` → `repositories` → `models` | Implementado |
 | Publicar-suscribir | Arquitectura | Canal WebSocket de cada partida (`ConnectionManager`) | Implementado (US-08) |
 | Repository | Persistencia (no GoF) | `UsuarioRepository`, `PartidaRepository`, `TokenRepository` | Implementado ([ADR 0009](0009-repository-persistencia.md)) |

@@ -10,9 +10,9 @@ from app.core.security import crear_token_acceso
 from app.db.session import get_session
 from app.main import app
 from app.models.usuario import Usuario
+from app.realtime.arena import ANCHO_ARENA, PUNTOS_DE_INICIO
 from app.realtime.connection_manager import manager
 from app.realtime.gestor_motores import gestor_motores
-from app.realtime.motor_partida import ANCHO_ARENA, PUNTOS_DE_INICIO
 from app.repositories import UsuarioRepository
 
 
@@ -118,7 +118,7 @@ def test_el_jugador_recibe_su_posicion_inicial_al_entrar(client, db_session):
         estado = recibir_hasta(canal, es_estado)
 
     x, y = PUNTOS_DE_INICIO[0]
-    assert estado["jugadores"] == [{"jugador_id": ana, "x": x, "y": y}]
+    assert estado["jugadores"] == [{"jugador_id": ana, "x": x, "y": y, "puntaje": 0}]
     assert estado["arena"]["ancho"] == ANCHO_ARENA
 
 

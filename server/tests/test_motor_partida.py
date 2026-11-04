@@ -6,15 +6,15 @@ import math
 import pytest
 
 from app.realtime import motor_partida
-from app.realtime.eventos import ESTADO_ACTUALIZADO
-from app.realtime.motor_partida import (
+from app.realtime.arena import (
     ALTO_ARENA,
     ANCHO_ARENA,
     PUNTOS_DE_INICIO,
     RADIO_JUGADOR,
-    VELOCIDAD,
-    MotorPartida,
+    arena_basica,
 )
+from app.realtime.eventos import ESTADO_ACTUALIZADO
+from app.realtime.motor_partida import VELOCIDAD, MotorPartida
 
 UN_SEGUNDO = 20  # ticks de 50 ms
 
@@ -214,7 +214,7 @@ def test_avisa_el_estado_cuando_algo_cambia():
 
     (evento,) = observador.eventos
     assert evento.tipo == ESTADO_ACTUALIZADO and evento.partida_id == 1
-    assert evento.datos["jugadores"] == [{"jugador_id": 7, "x": 240, "y": 135}]
+    assert evento.datos["jugadores"] == [{"jugador_id": 7, "x": 240, "y": 135, "puntaje": 0}]
 
 
 def test_no_avisa_si_nada_cambio():
@@ -281,11 +281,7 @@ def test_el_estado_trae_la_arena_y_los_jugadores_ordenados():
     estado = motor.estado()
 
     assert [j["jugador_id"] for j in estado["jugadores"]] == [3, 9]
-    assert estado["arena"] == {
-        "ancho": ANCHO_ARENA,
-        "alto": ALTO_ARENA,
-        "radio": RADIO_JUGADOR,
-    }
+    assert estado["arena"] == arena_basica().a_dict()
 
 
 # ciclo

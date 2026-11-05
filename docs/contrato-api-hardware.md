@@ -4,7 +4,8 @@ Define cómo llegan al servidor las señales del control físico de 5 botones (R
 mapean al mismo comando que usa el movimiento por teclado (RF-010, RF-026, CU-07).
 
 Estado: **propuesta v1, Sprint 2**. Los mensajes de la capa 2 (WebSocket) se validan con el
-responsable de US-25 antes de implementarlos.
+responsable de US-25 antes de implementarlos. En el Sprint 3 el estado de la partida agrega el
+`puntaje` de cada jugador y el `reactor`, los `obstaculos` y las `celdas` de la arena.
 
 ## Resumen
 
@@ -119,18 +120,32 @@ mueve. Se envía como máximo cada 50 ms.
 ```json
 {
   "tipo": "estado",
-  "jugadores": [{ "jugador_id": 3, "x": 240, "y": 135 }],
-  "arena": { "ancho": 960, "alto": 540, "radio": 20 }
+  "jugadores": [{ "jugador_id": 3, "x": 240, "y": 135, "puntaje": 0 }],
+  "arena": {
+    "ancho": 960,
+    "alto": 540,
+    "radio": 20,
+    "reactor": { "x": 480, "y": 270, "radio": 40 },
+    "obstaculos": [{ "x": 300, "y": 200, "ancho": 80, "alto": 20, "tipo": "barrera" }],
+    "celdas": [{ "id": 1, "x": 200, "y": 400, "valor": 10 }]
+  }
 }
 ```
 
 | Campo | Notas |
 | --- | --- |
 | `jugadores` | Uno por jugador conectado, ordenados por `jugador_id`. `x` e `y` son píxeles enteros |
+| `jugadores[].puntaje` | Puntos del jugador en la partida. Empieza en 0 y puede subir o bajar |
 | `arena` | Tamaño de la arena y radio del jugador, para que el cliente dibuje sin números fijos |
+| `arena.reactor` | Centro (`x`, `y`) y `radio` del reactor |
+| `arena.obstaculos` | Rectángulos del mapa (`x`, `y`, `ancho`, `alto`). `tipo` dice qué hacen: `barrera`, `trampa`, `puerta` |
+| `arena.celdas` | Celdas de energía que están en el mapa (`id`, `x`, `y`, `valor`). Es una lista vacía si no hay |
 
-Valores del Sprint 2 (provisionales): arena de 960 × 540 px, velocidad de 120 px/s, jugador de
-radio 20 y 4 puntos de inicio. Solo hay colisión con los límites del mapa.
+Los puntos de inicio de los jugadores no se envían: el cliente ya recibe la posición de cada uno.
+
+Valores (provisionales): arena de 960 × 540 px, velocidad de 120 px/s, jugador de radio 20, reactor
+de radio 40 al centro y 4 puntos de inicio. Por ahora la arena no trae obstáculos ni celdas y solo
+hay colisión con los límites del mapa; los obstáculos (US-14) y las celdas (US-13) llegan después.
 
 **Error:**
 
@@ -207,4 +222,3 @@ local. El cliente lo abre como si fuera un puerto serial, con `socket://localhos
 | Entrada inválida al servidor | `"control": "saltar"` | Respuesta `error` con `entrada_invalida` |
 | Jugador aturdido | Entrada `arriba` | El servidor la ignora |
 | Fuente indistinta | Misma secuencia por teclado y por Serial | Mismo movimiento en el servidor |
-

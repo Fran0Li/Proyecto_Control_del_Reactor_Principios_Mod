@@ -13,16 +13,13 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from app.realtime.arena import Arena, arena_basica
 from app.realtime.eventos import ESTADO_ACTUALIZADO, EventoPartida
 
 log = logging.getLogger(__name__)
 
-ANCHO_ARENA = 960
-ALTO_ARENA = 540
-RADIO_JUGADOR = 20
 VELOCIDAD = 120.0  # píxeles por segundo
 CICLO_S = 0.05  # un tick cada 50 ms (contrato de hardware, RNF-02)
-PUNTOS_DE_INICIO = [(240, 135), (720, 135), (240, 405), (720, 405)]
 DIRECCIONES = {"arriba": (0, -1), "abajo": (0, 1), "izquierda": (-1, 0), "derecha": (1, 0)}
 
 
@@ -36,11 +33,13 @@ class JugadorEnArena:
     x: float
     y: float
     presionados: set[str] = field(default_factory=set)
+    puntaje: int = 0
 
 
 class MotorPartida:
-    def __init__(self, partida_id: int) -> None:
+    def __init__(self, partida_id: int, arena: Arena | None = None) -> None:
         self.partida_id = partida_id
+        self.arena = arena if arena is not None else arena_basica()
         self._observadores: list[ObservadorPartida] = []
         self._jugadores: dict[int, JugadorEnArena] = {}
         self._hay_cambios = False
@@ -78,13 +77,22 @@ class MotorPartida:
         if existente is not None:
             existente.presionados.clear()
         else:
-            x, y = PUNTOS_DE_INICIO[len(self._jugadores) % len(PUNTOS_DE_INICIO)]
+            puntos = self.arena.puntos_inicio
+            x, y = puntos[len(self._jugadores) % len(puntos)]
             self._jugadores[jugador_id] = JugadorEnArena(jugador_id, float(x), float(y))
         self._hay_cambios = True
 
     def quitar_jugador(self, jugador_id: int) -> None:
         if self._jugadores.pop(jugador_id, None) is not None:
             self._hay_cambios = True
+
+    def sumar_puntaje(self, jugador_id: int, puntos: int) -> None:
+        """Suma (o resta) puntos al jugador. Lo usan las mecánicas: celdas, extraer del reactor."""
+        jugador = self._jugadores.get(jugador_id)
+        if jugador is None or puntos == 0:
+            return
+        jugador.puntaje += puntos
+        self._hay_cambios = True
 
     # entradas y movimiento 
 
@@ -106,8 +114,9 @@ class MotorPartida:
             norma = math.hypot(dx, dy)  # en diagonal se avanza igual de rápido que en recta
             x = jugador.x + dx / norma * VELOCIDAD * dt
             y = jugador.y + dy / norma * VELOCIDAD * dt
-            x = min(max(x, RADIO_JUGADOR), ANCHO_ARENA - RADIO_JUGADOR)
-            y = min(max(y, RADIO_JUGADOR), ALTO_ARENA - RADIO_JUGADOR)
+            radio = self.arena.radio_jugador
+            x = min(max(x, radio), self.arena.ancho - radio)
+            y = min(max(y, radio), self.arena.alto - radio)
             if (x, y) != (jugador.x, jugador.y):
                 jugador.x, jugador.y = x, y
                 self._hay_cambios = True
@@ -115,10 +124,15 @@ class MotorPartida:
     def estado(self) -> dict:
         return {
             "jugadores": [
-                {"jugador_id": j.jugador_id, "x": round(j.x), "y": round(j.y)}
+                {
+                    "jugador_id": j.jugador_id,
+                    "x": round(j.x),
+                    "y": round(j.y),
+                    "puntaje": j.puntaje,
+                }
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],
-            "arena": {"ancho": ANCHO_ARENA, "alto": ALTO_ARENA, "radio": RADIO_JUGADOR},
+            "arena": self.arena.a_dict(),
         }
 
     async def tick(self) -> None:

@@ -13,8 +13,10 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from app.realtime.acciones import AccionContextual
 from app.realtime.arena import Arena, arena_basica
-from app.realtime.eventos import ESTADO_ACTUALIZADO, EventoPartida
+from app.realtime.eventos import ACCION_REALIZADA, ESTADO_ACTUALIZADO, EventoPartida
+from app.realtime.reactor import ExtraccionReactor
 
 log = logging.getLogger(__name__)
 
@@ -37,12 +39,25 @@ class JugadorEnArena:
 
 
 class MotorPartida:
-    def __init__(self, partida_id: int, arena: Arena | None = None) -> None:
+    def __init__(
+        self,
+        partida_id: int,
+        arena: Arena | None = None,
+        acciones: list[AccionContextual] | None = None,
+    ) -> None:
         self.partida_id = partida_id
         self.arena = arena if arena is not None else arena_basica()
+        # Lo que hace el botón de acción, en orden de prioridad (ver acciones.py)
+        self._acciones: list[AccionContextual] = (
+            acciones
+            if acciones is not None
+            else [ExtraccionReactor(self.arena.reactor, self.arena.radio_jugador)]
+        )
         self._observadores: list[ObservadorPartida] = []
         self._jugadores: dict[int, JugadorEnArena] = {}
         self._hay_cambios = False
+        self._eventos_pendientes: list[EventoPartida] = []
+        self._ticks = 0  # ticks desde que arrancó el motor (el tiempo de la partida)
         self._tarea: asyncio.Task | None = None
 
     # observadores 
@@ -94,16 +109,47 @@ class MotorPartida:
         jugador.puntaje += puntos
         self._hay_cambios = True
 
+    @property
+    def tiempo(self) -> float:
+        """Segundos de partida según los ticks (se cuentan enteros para no acumular error)."""
+        return self._ticks * CICLO_S
+
     # entradas y movimiento 
 
     def aplicar_entrada(self, jugador_id: int, control: str, estado: str) -> None:
         jugador = self._jugadores.get(jugador_id)
-        if jugador is None or control not in DIRECCIONES:
-            return  # la acción (extraer energía, terminales) llega en el Sprint 3
+        if jugador is None:
+            return
+        if control == "accion":
+            if estado == "presionado":  # soltar la acción no hace nada (contrato)
+                self._accionar(jugador)
+            return
+        if control not in DIRECCIONES:
+            return
         if estado == "presionado":
             jugador.presionados.add(control)
         else:
             jugador.presionados.discard(control)
+
+    def _accionar(self, jugador: JugadorEnArena) -> None:
+        """Hace la primera acción del contexto que aplique donde está el jugador."""
+        for accion in self._acciones:
+            resultado = accion.intentar(jugador, self.tiempo)
+            if resultado is None:
+                continue
+            self.sumar_puntaje(jugador.jugador_id, resultado.puntos)
+            self._eventos_pendientes.append(
+                EventoPartida(
+                    ACCION_REALIZADA,
+                    self.partida_id,
+                    {
+                        "jugador_id": jugador.jugador_id,
+                        "accion": resultado.accion,
+                        "puntos": resultado.puntos,
+                    },
+                )
+            )
+            return
 
     def _mover(self, dt: float) -> None:
         for jugador in self._jugadores.values():
@@ -133,11 +179,20 @@ class MotorPartida:
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],
             "arena": self.arena.a_dict(),
+            **{accion.clave: accion.a_dict() for accion in self._acciones},
         }
 
     async def tick(self) -> None:
-        """Un ciclo del motor: mueve a los jugadores y, si algo cambió, avisa a todos."""
+        """Un ciclo del motor: avanza las acciones, mueve a los jugadores y, si algo cambió,
+        avisa a todos. Las acciones que pasaron desde el tick anterior se avisan primero."""
+        self._ticks += 1
+        for accion in self._acciones:
+            if accion.actualizar(CICLO_S):
+                self._hay_cambios = True
         self._mover(CICLO_S)
+        eventos, self._eventos_pendientes = self._eventos_pendientes, []
+        for evento in eventos:
+            await self._notificar(evento)
         if self._hay_cambios:
             self._hay_cambios = False
             await self._notificar(EventoPartida(ESTADO_ACTUALIZADO, self.partida_id, self.estado()))

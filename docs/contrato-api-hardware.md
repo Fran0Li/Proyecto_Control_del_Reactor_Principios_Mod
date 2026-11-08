@@ -114,8 +114,8 @@ Todos los mensajes son JSON con un campo `tipo`.
 ### Servidor → cliente
 
 **Estado de la partida** (lo define US-25). El servidor lo envía a todos los jugadores
-conectados a la partida cada vez que algo cambia: alguien entra, alguien sale o alguien se
-mueve. Se envía como máximo cada 50 ms.
+conectados a la partida cada vez que algo cambia: alguien entra, alguien sale, alguien se
+mueve o cambia la energía del reactor. Se envía como máximo cada 50 ms.
 
 ```json
 {
@@ -128,7 +128,8 @@ mueve. Se envía como máximo cada 50 ms.
     "reactor": { "x": 480, "y": 270, "radio": 40 },
     "obstaculos": [{ "x": 300, "y": 200, "ancho": 80, "alto": 20, "tipo": "barrera" }],
     "celdas": [{ "id": 1, "x": 200, "y": 400, "valor": 10 }]
-  }
+  },
+  "reactor": { "energia": 90, "capacidad": 100 }
 }
 ```
 
@@ -140,6 +141,7 @@ mueve. Se envía como máximo cada 50 ms.
 | `arena.reactor` | Centro (`x`, `y`) y `radio` del reactor |
 | `arena.obstaculos` | Rectángulos del mapa (`x`, `y`, `ancho`, `alto`). `tipo` dice qué hacen: `barrera`, `trampa`, `puerta` |
 | `arena.celdas` | Celdas de energía que están en el mapa (`id`, `x`, `y`, `valor`). Es una lista vacía si no hay |
+| `reactor` | Energía que le queda al reactor (`energia`, entero) y lo máximo que guarda (`capacidad`). Cambia cuando alguien extrae y mientras se recarga |
 
 Los puntos de inicio de los jugadores no se envían: el cliente ya recibe la posición de cada uno.
 
@@ -162,7 +164,12 @@ hay colisión con los límites del mapa; los obstáculos (US-14) y las celdas (U
 - En cada ciclo del motor de partida mueve al jugador según esos direccionales y valida
   colisiones (US-25).
 - `accion` + `presionado` dispara la acción del contexto: extraer energía, activar una
-  terminal, etc. (RF-011, RF-012, Sprint 3). `accion` + `liberado` se ignora en este sprint.
+  terminal, etc. (RF-011, RF-012). `accion` + `liberado` no hace nada.
+- **Extraer energía (US-11):** si el jugador toca el reactor (la distancia entre los centros es
+  como mucho el radio del reactor más el del jugador), saca hasta **10** de energía y se le suma
+  al puntaje. Cada jugador espera **0,5 s** entre una extracción y la siguiente, así no gana quien
+  presiona más rápido. El reactor empieza con **100** de energía, se recarga **5 por segundo** y
+  no pasa de 100; si está vacío, la acción no da nada. Valores provisionales.
 - Si el jugador está "Aturdido" o "Eliminado temporalmente", ignora sus entradas (CU-07, E3).
 - Una entrada con campos inválidos se descarta y se responde con `error` (CU-07, E1).
 - Límite de **30 entradas por segundo** por jugador; lo que pase de ahí se descarta.

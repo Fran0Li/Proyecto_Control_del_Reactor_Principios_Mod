@@ -1,4 +1,6 @@
-"""Movimiento por el canal WebSocket: entradas, estado para todos y latencia (US-25)."""
+"""Movimiento por el canal WebSocket: entradas, estado para todos y latencia (US-25).
+
+Incluye la acción de extraer energía del reactor de punta a punta (US-11)."""
 
 import threading
 import time
@@ -10,9 +12,11 @@ from app.core.security import crear_token_acceso
 from app.db.session import get_session
 from app.main import app
 from app.models.usuario import Usuario
-from app.realtime.arena import ANCHO_ARENA, PUNTOS_DE_INICIO
+from app.realtime import motor_partida
+from app.realtime.arena import ANCHO_ARENA, PUNTOS_DE_INICIO, Arena, Reactor
 from app.realtime.connection_manager import manager
 from app.realtime.gestor_motores import gestor_motores
+from app.realtime.reactor import ENERGIA_POR_EXTRACCION
 from app.repositories import UsuarioRepository
 
 
@@ -266,3 +270,28 @@ def test_el_motor_se_detiene_cuando_se_van_todos_los_jugadores(client, db_sessio
         assert gestor_motores.existente(partida) is not None  # ana sigue dentro
 
     assert gestor_motores.existente(partida) is None
+
+#  acción: extraer energía del reactor (US-11)
+
+
+def test_la_accion_junto_al_reactor_suma_puntos_y_todos_lo_ven(client, db_session, monkeypatch):
+    # La arena pone el primer punto de inicio encima del reactor
+    arena = Arena(reactor=Reactor(x=240, y=135, radio=40))
+    monkeypatch.setattr(motor_partida, "arena_basica", lambda: arena)
+    partida, ana, beto = partida_de_dos(client, db_session)
+
+    with client.websocket_connect(url_del_canal(partida, ana)) as canal_ana:
+        with client.websocket_connect(url_del_canal(partida, beto)) as canal_beto:
+            recibir_hasta(canal_beto, con_dos_jugadores)
+            canal_ana.send_json(entrada("accion", "presionado", 1))
+            visto_por_beto = recibir_hasta(
+                canal_beto, lambda m: con_dos_jugadores(m) and puntaje_de(m, ana) > 0
+            )
+
+    assert puntaje_de(visto_por_beto, ana) == ENERGIA_POR_EXTRACCION
+    assert puntaje_de(visto_por_beto, beto) == 0
+    assert visto_por_beto["reactor"]["energia"] < visto_por_beto["reactor"]["capacidad"]
+
+
+def puntaje_de(mensaje, jugador_id):
+    return next(j["puntaje"] for j in mensaje["jugadores"] if j["jugador_id"] == jugador_id)

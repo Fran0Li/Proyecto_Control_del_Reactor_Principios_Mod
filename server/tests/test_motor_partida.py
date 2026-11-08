@@ -123,7 +123,7 @@ def test_en_diagonal_avanza_la_misma_distancia_que_en_recta():
     assert math.hypot(x - x0, y - y0) == pytest.approx(VELOCIDAD, abs=1.5)
 
 
-def test_la_accion_no_mueve_al_jugador_en_este_sprint():
+def test_la_accion_no_mueve_al_jugador():
     motor = motor_con_un_jugador()
     inicio = posicion(motor, 7)
     motor.aplicar_entrada(7, "accion", "presionado")

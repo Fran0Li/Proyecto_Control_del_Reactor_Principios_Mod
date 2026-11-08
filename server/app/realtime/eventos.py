@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 ESTADO_ACTUALIZADO = "estado_actualizado"
+ACCION_REALIZADA = "accion_realizada"  # datos: jugador_id, accion, puntos
 
 
 @dataclass(frozen=True)

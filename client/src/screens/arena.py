@@ -1,4 +1,4 @@
-"""Pantalla de la arena (versión mínima): un círculo rojo por jugador sobre fondo blanco."""
+"""Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía."""
 
 import pygame
 
@@ -8,6 +8,8 @@ from src.screens.panel_canal import PanelCanal
 
 BLANCO = (255, 255, 255)
 ROJO = (220, 30, 30)
+AMARILLO = (240, 190, 20)
+RADIO_CELDA = 10  # el servidor usa el mismo radio para saber cuándo se recoge una celda
 SUAVIZADO = 0.35  # cuánto se acerca al punto nuevo en cada cuadro (el servidor manda ~20 por s)
 CONTROLES = ("arriba", "abajo", "izquierda", "derecha", "accion")
 
@@ -95,6 +97,8 @@ class ArenaScreen:
         estado = self.panel.estado if self.panel is not None else None
         if estado is not None:
             # la arena del servidor mide 960 x 540 y la ventana tiene 960 de ancho: se dibuja 1 a 1
+            for celda in estado["arena"].get("celdas", []):
+                pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
             for jugador in estado["jugadores"]:
                 x, y = self.visuales.get(jugador["jugador_id"], [jugador["x"], jugador["y"]])
                 pygame.draw.circle(screen, ROJO, (int(x), int(y)), estado["arena"]["radio"])

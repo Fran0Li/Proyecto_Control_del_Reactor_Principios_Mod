@@ -1,0 +1,67 @@
+name: Deploy
+
+# Entrega continua: cada vez que el CI pasa en develop, se despliega esa versión en la VM de Azure.
+# Si el CI falla, no se despliega nada. También se puede lanzar a mano desde la pestaña Actions.
+#
+# Secretos del repo (Settings > Secrets and variables > Actions), ver docs/despliegue.md:
+#   VM_HOST     dominio de la VM (control-reactor.eastus.cloudapp.azure.com)
+#   VM_USER     usuario SSH de la VM
+#   VM_SSH_KEY  llave privada SSH que solo usa este workflow
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [develop]
+  workflow_dispatch:
+
+# Un despliegue a la vez; si llega otro, espera a que termine el anterior
+concurrency:
+  group: deploy-nube
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Desplegar en Azure
+    runs-on: ubuntu-24.04
+    # Solo con CI en verde de un push (merge) a develop, nunca por un PR
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    environment:
+      name: nube
+      url: https://${{ secrets.VM_HOST }}
+    env:
+      VERSION: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Preparar SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Actualizar y levantar los contenedores
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        # Primero se deja el repo de la VM en el commit exacto que pasó el CI y después se
+        # levanta con el script de esa misma versión
+        run: >-
+          ssh "$VM_USER@$VM_HOST"
+          "cd ~/reactor && git fetch origin develop && git reset --hard $VERSION
+          && ./deploy/desplegar.sh"
+
+      - name: Verificar que la API responde
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+        run: |
+          for intento in $(seq 1 20); do
+            if curl -fsS "https://$VM_HOST/api/health/db"; then exit 0; fi
+            echo "Todavía no responde (intento $intento), esperando..."
+            sleep 6
+          done
+          echo "La API no respondió después del despliegue" && exit 1

@@ -27,41 +27,71 @@ PC (cliente pygame) ─https/wss┤
 
 Las migraciones corren solas al arrancar el contenedor `server` (`alembic upgrade head`).
 
-## 1. Crear la VM (una sola vez, en portal.azure.com)
+## Lo que está desplegado
 
-1. Activar **Azure for Students** con la cuenta @estudiantec.cr (100 USD, sin tarjeta).
-2. **Máquinas virtuales → Crear**:
-   - Grupo de recursos: `rg-control-reactor`. Nombre: `vm-reactor`.
-   - Imagen: **Ubuntu Server 24.04 LTS (x64)**. Tamaño: **B1s** (o B2ats v2 si no hay B1s en la región).
-   - Autenticación: **clave pública SSH**, usuario `reactor`, generar un par nuevo y descargar el `.pem`.
-   - Puertos de entrada: **SSH (22), HTTP (80) y HTTPS (443)**. 8000 y 5432 quedan cerrados.
-3. En la **IP pública** de la VM → Configuración → **Etiqueta de nombre DNS**: `control-reactor`.
-   El dominio queda como `control-reactor.<region>.cloudapp.azure.com`.
+| Dato | Valor |
+| --- | --- |
+| URL | https://control-reactor.northcentralus.cloudapp.azure.com |
+| Suscripción | Azure for Students (cuenta @estudiantec.cr de Francisco) |
+| Grupo de recursos / VM | `rg-control-reactor` / `vm-reactor`, usuario `reactor` |
+| Región | `northcentralus` (Azure for Students solo permite belgiumcentral, westus2, canadacentral, francecentral y northcentralus) |
+| Tamaño | **Standard_B2ats_v2** (2 vCPU, 1 GB). B1s no tenía capacidad en la región; B2ats v2 también entra en las 750 h gratis |
+| Disco | 64 GB Premium SSD (P6, incluido en lo gratis) |
+
+## 1. Crear la VM (una sola vez, en Azure Cloud Shell con Bash)
+
+Activar **Azure for Students** con la cuenta @estudiantec.cr (100 USD, sin tarjeta) y abrir
+Cloud Shell (Bash, sin cuenta de almacenamiento):
+
+```bash
+# Regiones permitidas por la suscripción
+az policy assignment list --query "[].parameters.listOfAllowedLocations.value" -o tsv
+
+az group create -n rg-control-reactor -l northcentralus
+az vm create -g rg-control-reactor -n vm-reactor --image Ubuntu2404 \
+  --size Standard_B2ats_v2 --admin-username reactor --generate-ssh-keys \
+  --public-ip-sku Standard --public-ip-address-dns-name control-reactor \
+  --os-disk-size-gb 64 --storage-sku Premium_LRS
+az vm open-port -g rg-control-reactor -n vm-reactor --port 80,443 --priority 900
+```
+
+Quedan abiertos solo 22, 80 y 443 (8000 y 5432 cerrados). Si el tamaño no está disponible
+(`SkuNotAvailable`), probar otro de los gratuitos o otra región permitida.
+
+Cloud Shell sin almacenamiento **pierde la llave SSH al cerrar la sesión**. Para volver a entrar
+desde una sesión nueva:
+
+```bash
+[ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa
+az vm user update -g rg-control-reactor -n vm-reactor -u reactor --ssh-key-value "$(cat ~/.ssh/id_rsa.pub)"
+ssh reactor@control-reactor.northcentralus.cloudapp.azure.com
+```
 
 ## 2. Preparar la VM (una sola vez, por SSH)
 
 ```bash
-ssh -i vm-reactor_key.pem reactor@control-reactor.<region>.cloudapp.azure.com
+ssh reactor@control-reactor.northcentralus.cloudapp.azure.com
 
 # Docker
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && exit   # volver a entrar para que tome el grupo
 
-# 2 GB de swap: la B1s tiene 1 GB de RAM y construir las imágenes la llena
+# 2 GB de swap: la VM tiene 1 GB de RAM y construir las imágenes la llena
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile
 sudo swapon /swapfile && echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 # Código y configuración
 git clone -b develop https://github.com/Fran0Li/Proyecto_Control_del_Reactor_Principios_Mod ~/reactor
 cd ~/reactor
-cp deploy/.env.prod.example .env
-openssl rand -hex 32   # una vez para JWT_SECRET y otra para POSTGRES_PASSWORD
-nano .env              # DOMINIO, claves, CORS_ORIGENES y URL_PUBLICA con el dominio real
+# .env con claves aleatorias que nunca salen de la VM
+PG=$(openssl rand -hex 24); JWT=$(openssl rand -hex 32)
+sed -e "s#CAMBIAR_clave_larga#$PG#g" -e "s#CAMBIAR_openssl_rand_hex_32#$JWT#" deploy/.env.prod.example > .env
+chmod 600 .env
 
 ./deploy/desplegar.sh
 ```
 
-Revisar `https://<dominio>/api/health/db` (debe decir `conectada`) y `https://<dominio>` (cliente web).
+Revisar `https://control-reactor.northcentralus.cloudapp.azure.com/api/health/db` (debe decir `conectada`) y la raíz del dominio (cliente web).
 
 ## 3. Conectar la entrega continua (una sola vez)
 
@@ -77,7 +107,7 @@ En GitHub → Settings → Secrets and variables → Actions → **New repositor
 
 | Secreto | Valor |
 | --- | --- |
-| `VM_HOST` | el dominio, por ejemplo `control-reactor.eastus.cloudapp.azure.com` |
+| `VM_HOST` | el dominio, por ejemplo `control-reactor.northcentralus.cloudapp.azure.com` |
 | `VM_USER` | `reactor` |
 | `VM_SSH_KEY` | la llave privada completa (incluidas las líneas `BEGIN` y `END`) |
 
@@ -85,11 +115,11 @@ Para probar sin esperar un merge: Actions → **Deploy** → Run workflow (rama 
 
 ## 4. Usar el juego desplegado
 
-- **Celular o navegador:** abrir `https://<dominio>`. Con https el cliente llama a la API en
-  `https://<dominio>/api` y al WebSocket en `wss://<dominio>/api/ws/...` (`client/src/config.py`).
+- **Celular o navegador:** abrir `https://control-reactor.northcentralus.cloudapp.azure.com`. Con https el cliente llama a la API en
+  `https://control-reactor.northcentralus.cloudapp.azure.com/api` y al WebSocket en `wss://control-reactor.northcentralus.cloudapp.azure.com/api/ws/...` (`client/src/config.py`).
 - **PC (con el control físico):** desde `client/`:
-  `$env:SERVER_URL="https://<dominio>/api"; $env:CONTROL_PUERTO="COM3"; python main.py`
-- **Login con Google:** agregar `https://<dominio>/api/auth/google/callback` como URI de redirección
+  `$env:SERVER_URL="https://control-reactor.northcentralus.cloudapp.azure.com/api"; $env:CONTROL_PUERTO="COM3"; python main.py`
+- **Login con Google:** agregar `https://control-reactor.northcentralus.cloudapp.azure.com/api/auth/google/callback` como URI de redirección
   en Google Cloud (ver `docs/google-oauth.md`).
 
 ## Operación
@@ -103,6 +133,11 @@ Para probar sin esperar un merge: Actions → **Deploy** → Run workflow (rama 
 
 - **No borrar** los volúmenes `pgdata` (datos) ni `caddy_data` (certificados; Let's Encrypt limita
   cuántos se pueden emitir por semana).
-- **Costo:** B1s + IP pública + disco cuesta unos pocos dólares al mes, dentro del crédito. Si la VM
+- **Costo:** VM B2ats v2 + IP pública + disco cuesta unos pocos dólares al mes, dentro del crédito. Si la VM
   se detiene, el despliegue automático falla hasta encenderla de nuevo; el dominio no cambia.
 - **Plan B:** si la nube falla el día de la demo, se juega en local con `docker compose up`.
+
+## Apagar o borrar al terminar el curso
+
+- Pausar (deja de cobrar la VM, el dominio se mantiene): `az vm deallocate -g rg-control-reactor -n vm-reactor`
+- Borrar todo (VM, disco, IP): `az group delete -n rg-control-reactor`

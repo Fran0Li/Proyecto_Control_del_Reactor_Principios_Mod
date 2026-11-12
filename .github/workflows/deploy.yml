@@ -4,7 +4,7 @@ name: Deploy
 # Si el CI falla, no se despliega nada. También se puede lanzar a mano desde la pestaña Actions.
 #
 # Secretos del repo (Settings > Secrets and variables > Actions), ver docs/despliegue.md:
-#   VM_HOST     dominio de la VM (control-reactor.eastus.cloudapp.azure.com)
+#   VM_HOST     dominio de la VM (control-reactor.northcentralus.cloudapp.azure.com)
 #   VM_USER     usuario SSH de la VM
 #   VM_SSH_KEY  llave privada SSH que solo usa este workflow
 on:

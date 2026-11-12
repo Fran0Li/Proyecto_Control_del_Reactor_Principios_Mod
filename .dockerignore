@@ -1,0 +1,10 @@
+# Contexto de la imagen web (deploy/web.Dockerfile), que se construye desde la raíz
+.git
+.env
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+client/build
+hardware
+prototipos
+docs

@@ -1,0 +1,21 @@
+# Proxy inverso de producción (ver docs/despliegue.md).
+# DOMINIO viene del .env de la VM, por ejemplo control-reactor.eastus.cloudapp.azure.com.
+# Con un dominio real, Caddy saca y renueva solo el certificado de Let's Encrypt (HTTPS y wss://).
+
+{$DOMINIO} {
+	encode gzip
+
+	# API REST y WebSocket. handle_path quita el prefijo: /api/health llega al backend como /health.
+	handle_path /api/* {
+		reverse_proxy server:8000
+	}
+
+	# Cliente web compilado con pygbag (el mismo de la PC, ADR 0002)
+	handle {
+		root * /srv
+		# Que el navegador pregunte siempre por la versión nueva después de cada despliegue
+		@sinCache path / /index.html *.apk
+		header @sinCache Cache-Control "no-cache"
+		file_server
+	}
+}

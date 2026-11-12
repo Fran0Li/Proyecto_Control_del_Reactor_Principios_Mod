@@ -4,6 +4,7 @@ import pygame
 
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
+from src.screens.aviso_control import AvisoControl
 from src.screens.panel_canal import PanelCanal
 
 BLANCO = (255, 255, 255)
@@ -20,6 +21,7 @@ class ArenaScreen:
         self.panel: PanelCanal | None = None
         self.volver_a = "lobby"
         self.controles: ControlesJugador | None = None
+        self.aviso_control = AvisoControl()
         self.visuales: dict[int, list[float]] = {}  # posición dibujada (suavizada)
 
     # ciclo de vida
@@ -33,6 +35,7 @@ class ArenaScreen:
         if panel.canal is not None:
             fuentes = crear_fuentes(self.ancho, self.alto, CONTROL_PUERTO)
             self.controles = ControlesJugador(fuentes, panel.canal.enviar)
+        self.aviso_control = AvisoControl()
         self.activa = True
 
     def cerrar(self) -> None:
@@ -69,6 +72,8 @@ class ArenaScreen:
             return
         if self.controles is not None:
             self.controles.actualizar()
+            control = self.controles.control_fisico()
+            self.aviso_control.observar(control.estado if control is not None else None)
         if self.panel.estado is not None:
             self._acercar(self.panel.estado["jugadores"])
 
@@ -100,3 +105,4 @@ class ArenaScreen:
                 pygame.draw.circle(screen, ROJO, (int(x), int(y)), estado["arena"]["radio"])
         if self.controles is not None:
             self.controles.dibujar(screen)  # botones táctiles, solo en el navegador
+        self.aviso_control.dibujar(screen)  # estado del control físico (US-26)

@@ -6,13 +6,27 @@ import sys
 PUERTO_BACKEND = 8000
 
 
+def url_backend_web(protocolo: str, host: str, hostname: str) -> str:
+    """URL del backend vista desde la página web del cliente.
+
+    - Con https (nube): Caddy sirve la página y manda `/api/*` al backend, así que se usa el mismo
+      origen. El puerto 8000 no está abierto en la nube.
+    - Con http (servidor de pruebas de pygbag en la red local): backend en la misma IP, puerto 8000.
+    """
+    if protocolo == "https:":
+        return f"https://{host}/api"
+    return f"{protocolo}//{hostname}:{PUERTO_BACKEND}"
+
+
 def _servidor_por_defecto() -> str:
     """En el navegador, el backend está en la misma máquina desde la que se cargó la página."""
     if sys.platform == "emscripten":
         import platform
 
         ubicacion = platform.window.location
-        return f"{ubicacion.protocol}//{ubicacion.hostname}:{PUERTO_BACKEND}"
+        return url_backend_web(
+            str(ubicacion.protocol), str(ubicacion.host), str(ubicacion.hostname)
+        )
     return f"http://localhost:{PUERTO_BACKEND}"
 
 

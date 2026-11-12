@@ -15,6 +15,7 @@ from typing import Protocol
 
 from app.realtime.acciones import AccionContextual
 from app.realtime.arena import Arena, arena_basica
+from app.realtime.celdas import RecolectorCeldas
 from app.realtime.eventos import ACCION_REALIZADA, ESTADO_ACTUALIZADO, EventoPartida
 from app.realtime.reactor import ExtraccionReactor
 
@@ -53,6 +54,8 @@ class MotorPartida:
             if acciones is not None
             else [ExtraccionReactor(self.arena.reactor, self.arena.radio_jugador)]
         )
+        # Las celdas de energía se recogen al tocarlas y reaparecen solas (ver celdas.py)
+        self._celdas = RecolectorCeldas(self.arena.celdas, self.arena.radio_jugador)
         self._observadores: list[ObservadorPartida] = []
         self._jugadores: dict[int, JugadorEnArena] = {}
         self._hay_cambios = False
@@ -167,7 +170,20 @@ class MotorPartida:
                 jugador.x, jugador.y = x, y
                 self._hay_cambios = True
 
+    def _actualizar_celdas(self) -> None:
+        """Repone las celdas que ya les toca y da cada celda tocada a su jugador."""
+        if self._celdas.reponer(CICLO_S):
+            self._hay_cambios = True
+        jugadores = sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
+        posiciones = [(j.jugador_id, j.x, j.y) for j in jugadores]
+        for jugador_id, celda in self._celdas.recoger(posiciones):
+            self.sumar_puntaje(jugador_id, celda.valor)
+            self._hay_cambios = True
+
     def estado(self) -> dict:
+        arena = self.arena.a_dict()
+        # Solo las celdas que están ahora en el mapa
+        arena["celdas"] = [c.a_dict() for c in self._celdas.disponibles()]
         return {
             "jugadores": [
                 {
@@ -178,18 +194,20 @@ class MotorPartida:
                 }
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],
-            "arena": self.arena.a_dict(),
+            "arena": arena,
             **{accion.clave: accion.a_dict() for accion in self._acciones},
         }
 
     async def tick(self) -> None:
-        """Un ciclo del motor: avanza las acciones, mueve a los jugadores y, si algo cambió,
-        avisa a todos. Las acciones que pasaron desde el tick anterior se avisan primero."""
+        """Un ciclo del motor: avanza las acciones, mueve a los jugadores, recoge las celdas y,
+        si algo cambió, avisa a todos. Las acciones que pasaron desde el tick anterior se avisan
+        primero."""
         self._ticks += 1
         for accion in self._acciones:
             if accion.actualizar(CICLO_S):
                 self._hay_cambios = True
         self._mover(CICLO_S)
+        self._actualizar_celdas()
         eventos, self._eventos_pendientes = self._eventos_pendientes, []
         for evento in eventos:
             await self._notificar(evento)

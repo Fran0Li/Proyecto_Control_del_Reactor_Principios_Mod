@@ -28,6 +28,9 @@ El backend tiene que estar corriendo (`docker compose up` en la raíz). Para otr
 En el navegador el cliente llama al backend en la misma IP, puerto 8000. Si Windows pregunta por el
 firewall, permitir redes privadas.
 
+En la nube la página se sirve con https y el cliente usa `https://<dominio>/api` (ver
+`docs/despliegue.md`). Para jugar desde la PC contra la nube: `SERVER_URL=https://<dominio>/api`.
+
 ## Controles en la partida
 
 | Plataforma | Fuentes | `origen` en el mensaje |

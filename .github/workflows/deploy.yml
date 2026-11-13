@@ -30,7 +30,8 @@ jobs:
        github.event.workflow_run.event == 'push')
     environment:
       name: nube
-      url: https://${{ secrets.VM_HOST }}
+      # El dominio no es secreto; GitHub no permite usar secrets en este campo
+      url: https://control-reactor.northcentralus.cloudapp.azure.com
     env:
       VERSION: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:

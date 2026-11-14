@@ -5,6 +5,22 @@ funcionando en los dos están en `docs/adr/0002-cliente-movil-pygbag.md`.
 
 ## Correr en la PC
 
+En Windows, lo más fácil es el script: instala lo que falte, pone el puerto del control y avisa si
+el backend no responde.
+
+```
+.\jugar.ps1                 # control en COM5, backend local
+.\jugar.ps1 -Puerto COM3    # si Windows le asignó otro puerto a la placa
+.\jugar.ps1 -Simulador      # sin la placa, con hardware/simulator
+.\jugar.ps1 -SinControl     # solo teclado
+.\jugar.ps1 -Nube           # contra la VM de Azure
+```
+
+Si PowerShell no deja correr el script, en esa terminal:
+`Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`.
+
+A mano, o en Linux y Mac:
+
 ```
 pip uninstall -y pygame          # solo la primera vez, si tenías pygame normal instalado
 pip install -r requirements.txt
@@ -13,6 +29,9 @@ python main.py
 
 El backend tiene que estar corriendo (`docker compose up` en la raíz). Para otro servidor:
 `SERVER_URL=http://otra-ip:8000`.
+
+Con el control físico, el **Monitor Serie del Arduino IDE tiene que estar cerrado**: ocupa el
+puerto COM y el cliente no lo puede abrir.
 
 ## Correr en el navegador o en el celular
 

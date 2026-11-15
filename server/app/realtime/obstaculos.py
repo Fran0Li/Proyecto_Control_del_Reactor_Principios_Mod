@@ -38,6 +38,7 @@ class GestorObstaculos:
         self._radio = radio_jugador
         self._cerrada_s = cerrada_s
         self._abierta_s = abierta_s
+        self._hay_puertas = any(o.tipo == PUERTA for o in self._obstaculos)
         self._tiempo = 0.0
         self._puertas_abiertas = self._calcular_abierta()
 
@@ -51,10 +52,10 @@ class GestorObstaculos:
 
     def actualizar(self, dt: float) -> bool:
         """Avanza el reloj de las puertas. Devuelve True si cambiaron de abiertas a cerradas
-        o al revés, para que el motor avise a los clientes."""
+        o al revés, para que el motor avise a los clientes. Sin puertas nunca hay cambio."""
         self._tiempo += dt
         abiertas = self._calcular_abierta()
-        cambio = abiertas != self._puertas_abiertas
+        cambio = self._hay_puertas and abiertas != self._puertas_abiertas
         self._puertas_abiertas = abiertas
         return cambio
 

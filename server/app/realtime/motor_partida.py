@@ -205,15 +205,14 @@ class MotorPartida:
         }
 
     async def tick(self) -> None:
-        """Un ciclo del motor: avanza las acciones, mueve a los jugadores, recoge las celdas y,
-        si algo cambió, avisa a todos. Las acciones que pasaron desde el tick anterior se avisan
-        primero."""
+        """Un ciclo del motor: avanza las acciones, mueve a los jugadores y, si algo cambió,
+        avisa a todos. Las acciones que pasaron desde el tick anterior se avisan primero."""
         self._ticks += 1
         for accion in self._acciones:
             if accion.actualizar(CICLO_S):
                 self._hay_cambios = True
-                if self._obstaculos.actualizar(CICLO_S):
-                    self._hay_cambios = True  # una puerta se abrió o se cerró
+        if self._obstaculos.actualizar(CICLO_S):
+            self._hay_cambios = True  # una puerta se abrió o se cerró
         self._mover(CICLO_S)
         self._actualizar_celdas()
         eventos, self._eventos_pendientes = self._eventos_pendientes, []

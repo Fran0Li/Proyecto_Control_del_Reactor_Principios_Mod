@@ -5,6 +5,7 @@ import pygame
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
+from src.screens.dibujo_obstaculos import dibujar_obstaculos
 from src.screens.panel_canal import PanelCanal
 
 BLANCO = (255, 255, 255)
@@ -104,6 +105,7 @@ class ArenaScreen:
             # la arena del servidor mide 960 x 540 y la ventana tiene 960 de ancho: se dibuja 1 a 1
             for celda in estado["arena"].get("celdas", []):
                 pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
+                dibujar_obstaculos(screen, estado["arena"].get("obstaculos", []))
             for jugador in estado["jugadores"]:
                 x, y = self.visuales.get(jugador["jugador_id"], [jugador["x"], jugador["y"]])
                 pygame.draw.circle(screen, ROJO, (int(x), int(y)), estado["arena"]["radio"])

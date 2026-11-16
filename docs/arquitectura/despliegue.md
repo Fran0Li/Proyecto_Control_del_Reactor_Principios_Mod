@@ -58,10 +58,11 @@ Notas:
 - Las variables de entorno van en `.env` (plantilla en `.env.example`); el `.env` no se sube al
   repositorio.
 
-## Sprint 3: despliegue en la nube (propuesto)
+## Sprint 3: despliegue en la nube (implementado)
 
-El enunciado pide despliegue en la nube. El proveedor está por definir; esta es la forma que debe
-tener sin importar cuál se elija.
+Desplegado desde el 13/11/2026 en **https://control-reactor.northcentralus.cloudapp.azure.com**.
+La decisión y sus alternativas están en el [ADR 0010](../adr/0010-despliegue-en-la-nube.md); los
+pasos de operación, en [`docs/despliegue.md`](../despliegue.md).
 
 ```mermaid
 flowchart LR
@@ -70,29 +71,50 @@ flowchart LR
         CELJ["Celular con navegador"]
     end
 
-    subgraph NUBE["«nube» proveedor por definir"]
-        PROXY["proxy HTTPS<br/>certificado TLS"]
-        STATIC["página del cliente web<br/>build de pygbag"]
-        SRVN["contenedor server<br/>FastAPI"]
-        DBN[("PostgreSQL<br/>contenedor o servicio administrado")]
+    subgraph AZ["«nube» Azure · suscripción Azure for Students"]
+        subgraph VM["«dispositivo» VM vm-reactor<br/>Ubuntu 24.04 · Standard_B2ats_v2 · northcentralus"]
+            subgraph COMPOSE3["«entorno» Docker Compose (docker-compose.prod.yml)"]
+                CADDY["contenedor web · Caddy 2<br/>puertos 80 y 443<br/>TLS automático (Let's Encrypt)"]
+                STATIC["cliente web pygbag<br/>archivos servidos en /"]
+                SRVN["contenedor server<br/>FastAPI · 8000 (no publicado)"]
+                DBN[("contenedor db<br/>postgres:16 · 5432 (no publicado)")]
+                VOL3[/"volúmenes pgdata y caddy_data"/]
+            end
+        end
     end
 
     GOOG["Google OAuth 2.0"]
-    MAIL["Servidor SMTP"]
+    MAIL["Servidor SMTP<br/>(pendiente)"]
 
-    PCJ -- "HTTPS y wss" --> PROXY
-    CELJ -- "HTTPS y wss" --> PROXY
-    PROXY --> STATIC
-    PROXY --> SRVN
-    SRVN --> DBN
-    SRVN -- "OAuth" --> GOOG
-    SRVN -- "SMTP con TLS" --> MAIL
+    PCJ -- "HTTPS y wss · 443" --> CADDY
+    CELJ -- "HTTPS y wss · 443" --> CADDY
+    CADDY -- "/ archivos" --> STATIC
+    CADDY -- "/api/* → :8000<br/>REST y WebSocket" --> SRVN
+    SRVN -- "TCP 5432 · SQL" --> DBN
+    DBN --- VOL3
+    SRVN -. "OAuth" .-> GOOG
+    SRVN -. "SMTP con TLS" .-> MAIL
 ```
 
-- Si la página se sirve por HTTPS, el navegador exige `wss://` para el WebSocket, así que el
-  backend necesita certificado TLS (ADR 0002).
-- `CORS_ORIGENES` deja de ser `*` y pasa a ser el dominio del cliente web.
-- La imagen del backend es la misma que construye el CI.
+| Nodo | Software | Notas |
+| --- | --- | --- |
+| VM `vm-reactor` | Ubuntu 24.04, Docker, 2 GB de swap | Grupo de recursos `rg-control-reactor`; usuario `reactor` |
+| Contenedor `web` | Caddy 2 (`deploy/Caddyfile`, `deploy/web.Dockerfile`) | Único que publica puertos: 80 y 443. Saca y renueva el certificado solo |
+| Contenedor `server` | La misma imagen de `server/Dockerfile` | Sin `--reload`, con `--proxy-headers`. Corre `alembic upgrade head` al arrancar |
+| Contenedor `db` | `postgres:16`, volumen `pgdata` | No accesible desde fuera de la VM |
+| Cliente web | Compilado con pygbag dentro de la imagen de Caddy | Es el mismo código del cliente de escritorio (ADR 0002) |
+
+**Decisiones de red y configuración:**
+
+- Puertos públicos: **solo 22, 80 y 443**. El 8000 y el 5432 quedan cerrados; se llega a ellos
+  únicamente desde la red interna de Docker.
+- **Un solo origen:** la página y la API comparten dominio, con la API bajo `/api`. Así no hay
+  contenido mixto ni CORS entre dominios, y el WebSocket viaja por `wss://` (ADR 0002).
+- El cliente resuelve su URL en `url_backend_web()` (`client/src/config.py`): con `https` usa
+  `https://<host>/api`; con `http` (pygbag en la red local) sigue usando el puerto 8000.
+- `CORS_ORIGENES` en producción es el dominio del cliente, ya no `*`.
+- El `.env` de producción vive solo en la VM y no está en el repositorio.
+- Dominio gratuito de Azure (`*.cloudapp.azure.com`) por la etiqueta DNS de la IP pública.
 
 ## Pipeline de CI
 
@@ -121,3 +143,36 @@ flowchart TB
         F1["compilar para Arduino Uno"] --> F2["pruebas en la PC<br/>5 botones y joystick"]
     end
 ```
+
+## Pipeline de entrega continua
+
+Al mergear a `develop`, el CI corre primero; si termina en verde, se dispara el despliegue
+(`.github/workflows/deploy.yml`). Si el CI falla, no se despliega nada.
+
+```mermaid
+flowchart TB
+    MERGE["Merge a develop"] --> CI["Workflow CI<br/>4 jobs"]
+    CI -->|"conclusion: success"| DEP
+    CI -->|"falla"| STOP["No se despliega"]
+
+    subgraph DEP["Workflow Deploy · environment nube"]
+        direction TB
+        D1["SSH a la VM<br/>con la llave del secreto VM_SSH_KEY"]
+        D2["git fetch y git reset --hard al commit<br/>exacto que pasó el CI"]
+        D3["deploy/desplegar.sh<br/>docker compose up -d --build"]
+        D4["GET /api/health/db<br/>hasta 20 intentos"]
+        D1 --> D2 --> D3 --> D4
+    end
+
+    D4 -->|"responde conectada"| OK["Despliegue correcto"]
+    D4 -->|"no responde"| FAIL["El job falla y queda<br/>registrado en Actions"]
+```
+
+- Secretos del repositorio: `VM_HOST` (dominio), `VM_USER` y `VM_SSH_KEY` (llave usada solo por el
+  workflow, distinta de la llave personal).
+- Se despliega **desde `develop`** y no solo desde `main`, para que la nube tenga siempre lo último
+  y el despliegue se ejercite varias veces antes de la demo (ADR 0010).
+- Se despliega el **commit exacto** que pasó el CI, no la punta de la rama: lo probado y lo
+  desplegado son lo mismo.
+- También se puede lanzar a mano desde Actions con **Run workflow**.
+- Volver a una versión anterior: en la VM, `git reset --hard <commit>` y `./deploy/desplegar.sh`.

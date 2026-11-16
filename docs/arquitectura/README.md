@@ -1,15 +1,17 @@
 # Arquitectura de Control del Reactor
 
-Vistas de arquitectura del Sprint 2. Reemplazan las del ERS del Sprint 1, que se hicieron antes de
-elegir el stack actual (ADR 0001) y el cliente móvil con pygbag (ADR 0002).
+Vistas de arquitectura, actualizadas en el Sprint 3. Reemplazan las del ERS del Sprint 1, que se
+hicieron antes de elegir el stack actual (ADR 0001) y el cliente móvil con pygbag (ADR 0002).
 
 | Documento | Contenido | Work item |
 | --- | --- | --- |
 | [Vista lógica](vista-logica.md) | Capas del sistema, modelo de datos y flujo de una entrada del control | AB#80 |
 | [Diagrama de componentes](componentes.md) | Componentes del cliente, el backend y el hardware, con sus interfaces | AB#79 |
-| [Vista de despliegue](despliegue.md) | Nodos en red local (Sprint 2), despliegue en la nube (propuesto) y pipeline de CI | AB#80 |
+| [Vista de despliegue](despliegue.md) | Nodos en red local (Sprint 2), despliegue en la nube en Azure (Sprint 3) y pipelines de CI y de entrega continua | AB#80, AB#120 |
 | [ADR 0003: patrones de arquitectura](../adr/0003-patrones-de-arquitectura-y-diseno.md) | Cliente-servidor, capas y publicar-suscribir, con los drivers que los justifican | AB#81 |
 | ADRs de patrones de diseño | [0004 Factory](../adr/0004-factory-creacion-de-partidas.md), [0005 Adapter](../adr/0005-adapter-fuentes-de-entrada.md), [0006 Observer](../adr/0006-observer-motor-de-partida.md), [0007 Facade](../adr/0007-facade-api-client.md), [0008 Bridge](../adr/0008-bridge-conexion-del-cliente.md) y [0009 Repository](../adr/0009-repository-persistencia.md) | AB#81 |
+| [ADR 0010: despliegue en la nube](../adr/0010-despliegue-en-la-nube.md) | VM en Azure con el mismo Docker Compose más Caddy, y entrega continua desde `develop` | AB#120, AB#121 |
+| [ADR 0011: acciones del contexto](../adr/0011-acciones-del-contexto.md) | Qué hace el botón de acción según dónde esté el jugador (US-11) | AB#127 |
 
 ## Resumen
 
@@ -19,6 +21,8 @@ elegir el stack actual (ADR 0001) y el cliente móvil con pygbag (ADR 0002).
 - **Hardware:** Arduino Uno por USB Serial a la PC del jugador, traducido en el cliente al mismo
   mensaje que el teclado (`docs/contrato-api-hardware.md`).
 - **Contenedores:** backend y PostgreSQL con Docker Compose; la misma imagen se construye en el CI.
+- **Nube (Sprint 3):** el mismo Compose en una VM de Azure, con Caddy de proxy HTTPS, y despliegue
+  automático en cada merge a `develop` que pase el CI (ADR 0010).
 - **Patrones de diseño:** Factory (creacional), Adapter (estructural) y Observer (de
   comportamiento), además de Facade, Bridge y Repository (ADRs 0004 a 0009).
 

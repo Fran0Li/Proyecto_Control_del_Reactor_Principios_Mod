@@ -1,8 +1,8 @@
 # ADR 0006: Observer para avisar lo que pasa en la partida
 
 - **Categoría:** patrón de comportamiento
-- **Estado:** Implementado (US-25, Sprint 2); observadores de puntaje y ranking planificados para
-  el Sprint 3
+- **Estado:** Implementado (US-25, Sprint 2). En el Sprint 3 se agregó `EvaluadorLogros` (US-27)
+  sin modificar el motor; el ranking (US-19) puede suscribirse igual
 - **Fecha:** 2026-10-25
 - **Relacionado:** ADR 0003 (publicar-suscribir en el canal de la partida), ADR 0005 (Adapter)
 
@@ -32,7 +32,8 @@ Usar el patrón **Observer**. El motor de cada partida es el **Publisher**: guar
 | **Publisher** (sujeto) | `MotorPartida`: `suscribir()`, `desuscribir()`, `_notificar(evento)` y la lista `_observadores` | `server/app/realtime/motor_partida.py` |
 | **Interfaz de los Subscribers** | `ObservadorPartida` (`Protocol` con `al_evento(evento)`) | `server/app/realtime/motor_partida.py` |
 | **Subscriber concreto** | `NotificadorWebSocket`: envía el estado a todos los jugadores con `ConnectionManager.difundir()` | `server/app/realtime/notificador_websocket.py` |
-| Evento | `EventoPartida(tipo, partida_id, datos)`; hoy `estado_actualizado` | `server/app/realtime/eventos.py` |
+| **Subscriber concreto** (Sprint 3) | `EvaluadorLogros`: junta la energía extraída de cada jugador y, con `partida_finalizada`, guarda los logros nuevos (US-27) | `server/app/realtime/evaluador_logros.py` |
+| Evento | `EventoPartida(tipo, partida_id, datos)`: `estado_actualizado`, `accion_realizada` (US-11) y el contrato de `partida_finalizada` (US-17) | `server/app/realtime/eventos.py` |
 | Quien suscribe | `GestorMotores.obtener()`: crea un motor por partida y le suscribe el notificador | `server/app/realtime/gestor_motores.py` |
 
 ```mermaid

@@ -59,13 +59,18 @@ Quedan abiertos solo 22, 80 y 443 (8000 y 5432 cerrados). Si el tamaño no está
 (`SkuNotAvailable`), probar otro de los gratuitos o otra región permitida.
 
 Cloud Shell sin almacenamiento **pierde la llave SSH al cerrar la sesión**. Para volver a entrar
-desde una sesión nueva:
+desde una sesión nueva, se crea una llave y se **agrega** a la VM con un comando que corre adentro:
 
 ```bash
+az account set -s "Azure for Students"
 [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa
-az vm user update -g rg-control-reactor -n vm-reactor -u reactor --ssh-key-value "$(cat ~/.ssh/id_rsa.pub)"
+az vm run-command invoke -g rg-control-reactor -n vm-reactor --command-id RunShellScript \
+  --scripts "echo '$(cat ~/.ssh/id_rsa.pub)' >> /home/reactor/.ssh/authorized_keys"
 ssh reactor@control-reactor.northcentralus.cloudapp.azure.com
 ```
+
+No usar `az vm user update --ssh-key-value` para esto: puede reemplazar las llaves de la VM y borrar
+la que usa GitHub Actions para desplegar (sección 3).
 
 ## 2. Preparar la VM (una sola vez, por SSH)
 
@@ -121,6 +126,44 @@ Para probar sin esperar un merge: Actions → **Deploy** → Run workflow (rama 
   `$env:SERVER_URL="https://control-reactor.northcentralus.cloudapp.azure.com/api"; $env:CONTROL_PUERTO="COM3"; python main.py`
 - **Login con Google:** agregar `https://control-reactor.northcentralus.cloudapp.azure.com/api/auth/google/callback` como URI de redirección
   en Google Cloud (ver `docs/google-oauth.md`).
+
+## 5. Correo (SMTP)
+
+Los correos de verificación y de recuperación de contraseña salen por Gmail desde una cuenta creada
+solo para el proyecto, con una **contraseña de aplicación** (necesita la verificación en dos pasos
+activada en esa cuenta). Sin SMTP configurado, los correos solo se imprimen en los logs del
+contenedor y no se puede crear una cuenta desde la nube.
+
+En la VM (sección 1 para entrar), en `~/reactor/.env`:
+
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<cuenta del proyecto>@gmail.com
+SMTP_PASSWORD=<contraseña de aplicación: 16 letras, sin espacios>
+```
+
+La contraseña la escribe a mano quien administra la cuenta, con `nano .env`; no se pega en chats ni
+en el repositorio. Después:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --force-recreate server
+```
+
+Para revisar la configuración **sin mostrar la contraseña**:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T server python -c "from app.core.config import settings as s; print(repr(s.smtp_host), s.smtp_port, repr(s.smtp_user), 'largo:', len(s.smtp_password), 'espacios:', ' ' in s.smtp_password)"
+```
+
+Debe dar `'smtp.gmail.com' 587 '<cuenta>@gmail.com' largo: 16 espacios: False`.
+
+- Si falla el envío, la cuenta del jugador igual se crea (sin verificar) y el log dice
+  `No se pudo enviar el correo de verificación: ...`. Desde el juego se puede pedir otro correo.
+- Revisar bien el host: con un error de tipeo (por ejemplo `smtp.gamil.com`) la contraseña se le
+  manda a un servidor ajeno. Si pasa, **revocar la contraseña de aplicación y crear otra**.
+- En local es igual, en el `.env` de la raíz. Ahí el enlace del correo es `http://localhost:8000/...`
+  y solo abre en la PC donde corre Docker; en la nube usa el dominio y abre desde cualquier lado.
 
 ## Operación
 

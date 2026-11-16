@@ -17,6 +17,7 @@ from app.realtime.acciones import AccionContextual
 from app.realtime.arena import Arena, arena_basica
 from app.realtime.celdas import RecolectorCeldas
 from app.realtime.eventos import ACCION_REALIZADA, ESTADO_ACTUALIZADO, EventoPartida
+from app.realtime.obstaculos import GestorObstaculos
 from app.realtime.reactor import ExtraccionReactor
 
 log = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class MotorPartida:
         )
         # Las celdas de energía se recogen al tocarlas y reaparecen solas (ver celdas.py)
         self._celdas = RecolectorCeldas(self.arena.celdas, self.arena.radio_jugador)
+        self._obstaculos = GestorObstaculos(self.arena.obstaculos, self.arena.radio_jugador)
         self._observadores: list[ObservadorPartida] = []
         self._jugadores: dict[int, JugadorEnArena] = {}
         self._hay_cambios = False
@@ -161,11 +163,13 @@ class MotorPartida:
             if dx == 0 and dy == 0:
                 continue
             norma = math.hypot(dx, dy)  # en diagonal se avanza igual de rápido que en recta
-            x = jugador.x + dx / norma * VELOCIDAD * dt
-            y = jugador.y + dy / norma * VELOCIDAD * dt
+            velocidad = VELOCIDAD * self._obstaculos.factor_velocidad(jugador.x, jugador.y)
+            x = jugador.x + dx / norma * velocidad * dt
+            y = jugador.y + dy / norma * velocidad * dt
             radio = self.arena.radio_jugador
             x = min(max(x, radio), self.arena.ancho - radio)
             y = min(max(y, radio), self.arena.alto - radio)
+            x, y = self._obstaculos.mover(jugador.x, jugador.y, x, y)
             if (x, y) != (jugador.x, jugador.y):
                 jugador.x, jugador.y = x, y
                 self._hay_cambios = True
@@ -184,6 +188,8 @@ class MotorPartida:
         arena = self.arena.a_dict()
         # Solo las celdas que están ahora en el mapa
         arena["celdas"] = [c.a_dict() for c in self._celdas.disponibles()]
+        # Las puertas dicen si están abiertas o cerradas
+        arena["obstaculos"] = self._obstaculos.a_dicts()
         return {
             "jugadores": [
                 {
@@ -199,13 +205,14 @@ class MotorPartida:
         }
 
     async def tick(self) -> None:
-        """Un ciclo del motor: avanza las acciones, mueve a los jugadores, recoge las celdas y,
-        si algo cambió, avisa a todos. Las acciones que pasaron desde el tick anterior se avisan
-        primero."""
+        """Un ciclo del motor: avanza las acciones, mueve a los jugadores y, si algo cambió,
+        avisa a todos. Las acciones que pasaron desde el tick anterior se avisan primero."""
         self._ticks += 1
         for accion in self._acciones:
             if accion.actualizar(CICLO_S):
                 self._hay_cambios = True
+        if self._obstaculos.actualizar(CICLO_S):
+            self._hay_cambios = True  # una puerta se abrió o se cerró
         self._mover(CICLO_S)
         self._actualizar_celdas()
         eventos, self._eventos_pendientes = self._eventos_pendientes, []

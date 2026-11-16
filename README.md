@@ -52,6 +52,9 @@ pytest
 ruff check .
 ```
 
+Para instalar exactamente las mismas versiones que el CI, agregá `-c constraints.txt` al `pip
+install`. Qué está fijo y cómo actualizarlo: [`docs/dependencias.md`](docs/dependencias.md).
+
 ## Cliente pygame
 
 ```bash

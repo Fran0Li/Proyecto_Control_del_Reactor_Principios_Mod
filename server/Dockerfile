@@ -4,8 +4,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Las mismas versiones exactas que prueba el CI (docs/dependencias.md)
+COPY requirements.txt constraints.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
 
 COPY app ./app
 # Migraciones: se aplican al arrancar, así una base nueva queda con todas las tablas

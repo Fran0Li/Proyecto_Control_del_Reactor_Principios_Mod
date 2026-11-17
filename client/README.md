@@ -75,6 +75,24 @@ controles.dibujar(pantalla)  # botones táctiles, si hay
 controles.cerrar()           # al salir de la partida
 ```
 
+## Probar el control sin la ventana del juego
+
+`probar_control.py` hace de cliente sin ventana para las pruebas de aceptación del control
+(CP-274 latencia, CP-285 desconexión y CP-301 extracción, en `docs/pruebas/sprint-3/`). Inicia
+sesión, crea una partida, lee el Arduino con el mismo `EntradaSerial` del juego y muestra la
+latencia de cada botón, la distancia al reactor, el puntaje y cuándo se conecta o desconecta el
+control. Con Ctrl+C imprime el resumen y guarda las mediciones en `latencia_<fecha>.csv`.
+
+```
+python probar_control.py                   # COM5, backend local
+python probar_control.py --puerto COM3
+python probar_control.py --partida 7       # si la cuenta ya está en la partida 7
+```
+
+Mide desde que la PC lee `BTN ... PRESS` hasta que el servidor devuelve la posición nueva. No
+cuenta el antirrebote del firmware (20 ms), el USB ni el dibujo del cuadro; el resumen les suma
+40 ms de margen.
+
 ## Reglas al programar el cliente (ADR 0002)
 
 - **Nada bloqueante.** Nada de `requests`, `time.sleep` ni sockets en las pantallas. Para hablar

@@ -1,7 +1,8 @@
-# Casos de prueba del Sprint 3 — Rol C (US-10, US-26 y US-11)
+# Casos de prueba del Sprint 3 — Rol C (US-10, US-26, US-11 y US-27)
 
 Cubre el control físico (US-10), el aviso de control desconectado (US-26, parte de la US-10) y la
-extracción de energía del reactor con el botón de acción (US-11). Tasks del Board: AB#114 y AB#115.
+extracción de energía del reactor con el botón de acción (US-11) y los logros (US-27). Tasks del
+Board: AB#114, AB#115 y AB#119.
 La numeración del rol C en el Sprint 3 va de CP-265 a CP-314 (rol A: CP-165 a CP-214; rol B:
 CP-215 a CP-264).
 
@@ -19,9 +20,11 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`, `fw/` = `hardware/firm
 | US-10 Mover el personaje con el control físico | CP-265 a CP-275 (11) | 10 | 1 (CP-274) |
 | US-26 Aviso de control desconectado | CP-276 a CP-285 (10) | 9 | 1 (CP-285) |
 | US-11 Extraer energía del reactor | CP-286 a CP-301 (16) | 15 | 1 (CP-301) |
-| **Total** | **37** | **34** | **3** |
+| US-27 Logros | CP-302 a CP-314 (13) | 12 | 1 (CP-314) |
+| **Total** | **50** | **46** | **4** |
 
-Los tres pendientes son de aceptación con la placa real y se ejecutan a mano (ver
+Los cuatro pendientes son de aceptación y se ejecutan a mano: CP-274, CP-285 y CP-301 con la placa
+real, y CP-314 cuando exista el fin de partida (US-17). Ver
 [Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación)).
 
 ## US-10 Mover el personaje con el control físico
@@ -99,6 +102,53 @@ otro jugador lo ve y el reactor queda por debajo de su capacidad
 (`s/test_movimiento_ws.py::test_la_accion_junto_al_reactor_suma_puntos_y_todos_lo_ven`). Se cuenta
 dentro de CP-296 y CP-298 porque comprueba lo mismo de punta a punta.
 
+## US-27 Logros
+
+**Qué se comprueba:** al terminar una partida, cada jugador gana los logros cuya condición cumplió;
+los logros quedan guardados en la base, no se repiten y el jugador puede consultarlos. Los retos con
+puntos extra y mostrar los logros en el historial y en la ceremonia todavía no están hechos (ver
+[Fuera de estos casos](#fuera-de-estos-casos)).
+
+**Cómo está hecho:** `EvaluadorLogros` es un suscriptor del motor de la partida (Observer, ADR 0006).
+Junta la energía que cada jugador saca del reactor (evento `accion_realizada`) y, al recibir
+`partida_finalizada`, guarda los logros nuevos en la tabla `logros_jugador`. El catálogo está en
+`server/app/realtime/logros.py`:
+
+| Clave | Nombre | Condición |
+| --- | --- | --- |
+| `primera_partida` | Bautizo nuclear | Terminar una partida |
+| `primera_victoria` | Primera victoria | Ganar una partida (con empate no gana nadie) |
+| `energia_300` | Sobrecarga | Extraer 300 de energía del reactor en una sola partida |
+
+El motor todavía no emite `partida_finalizada` (es parte de la US-17), así que las pruebas
+automáticas lo emiten a mano con el mismo contrato que va a usar el motor
+(`server/app/realtime/eventos.py`): `puntajes` {jugador_id: puntaje final} y `ganador_id` (`None`
+si hay empate).
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-302 | El catálogo no repite claves y trae los ejemplos de la historia | — | Catálogo de logros | Claves únicas; están `primera_victoria` y `energia_300` | OK | U | `s/test_logros.py::test_las_claves_del_catalogo_no_se_repiten`, `s/test_logros.py::test_el_catalogo_trae_los_ejemplos_de_la_historia` |
+| CP-303 | No se vuelve a dar un logro que ya se tiene | El jugador ya tiene `primera_victoria` | Gana otra partida y saca 300 de energía | Solo es nuevo `energia_300` | OK | U | `s/test_logros.py::test_nuevos_logros_no_repite_los_que_ya_tenia` |
+| CP-304 | La energía cuenta desde el límite exacto | — | 300 y 299 de energía del reactor | Con 300 gana `energia_300`; con 299 no | OK | U | `s/test_logros.py::test_la_energia_cuenta_desde_el_limite_exacto` |
+| CP-305 | Al terminar la partida se guardan los logros de cada jugador | Ana y Beto en la partida, sin logros | Ana extrae 30 veces 10; fin con ganadora Ana (300 a 40) | Ana: `primera_partida`, `primera_victoria` y `energia_300`; Beto: solo `primera_partida` | OK | I | `s/test_logros.py::test_al_terminar_guarda_los_logros_de_cada_jugador` |
+| CP-306 | Solo cuenta la energía del reactor y solo se guarda al terminar | Ana en la partida | 40 acciones de otro tipo (`terminal`); un `estado_actualizado` sin fin de partida | La energía del reactor de Ana queda en 0 y no gana `energia_300`; sin `partida_finalizada` no se guarda nada | OK | I | `s/test_logros.py::test_solo_cuenta_la_energia_del_reactor`, `s/test_logros.py::test_ignora_los_eventos_que_no_le_interesan` |
+| CP-307 | Con empate nadie gana la primera victoria | Ana y Beto en la partida | Fin con 50 a 50 y `ganador_id` `None` | Ninguno de los dos gana `primera_victoria` | OK | I | `s/test_logros.py::test_con_empate_nadie_gana_la_primera_victoria` |
+| CP-308 | Los logros no se duplican de una partida a otra | Ana termina una partida | Ana juega y gana una segunda partida | Ana tiene `primera_partida` (de la primera) y `primera_victoria` (de la segunda), una vez cada uno y con la partida en que los ganó | OK | I | `s/test_logros.py::test_no_duplica_logros_de_una_partida_a_otra` |
+| CP-309 | El fin de partida se procesa una sola vez y acepta ids como texto | Ana en la partida | 1) El evento de fin llega dos veces con datos distintos. 2) Puntajes y ganador con ids como texto (como llegan desde JSON) | 1) Se guarda solo lo de la primera vez. 2) Ana gana `primera_victoria` igual | OK | I | `s/test_logros.py::test_una_partida_se_evalua_una_sola_vez`, `s/test_logros.py::test_acepta_ids_como_texto` |
+| CP-310 | Cada partida nueva queda con los logros suscritos | `GestorMotores` con la base de la prueba | Se crea el motor de una partida y emite el fin de partida | Se guardan los logros sin cambiar nada más (Observer, abierto/cerrado) | OK | I | `s/test_logros.py::test_el_gestor_suscribe_los_logros_a_cada_partida` |
+| CP-311 | Solo el jugador autenticado ve sus logros | Ana tiene `primera_victoria`; Beto no | `GET /logros` sin token y con el token de Beto | Sin token: 401. Beto ve `primera_victoria` como no obtenido | OK | I | `s/test_logros.py::test_sin_sesion_no_se_ven_los_logros`, `s/test_logros.py::test_cada_jugador_ve_solo_sus_logros` |
+| CP-312 | El jugador ve todo el catálogo y cuáles ya ganó | Ana tiene `primera_partida` de una partida | `GET /logros` con el token de Ana | 200 con los 3 logros; `primera_partida` con `obtenido` true y la partida; `primera_victoria` con `obtenido` false y `obtenido_en` null | OK | I | `s/test_logros.py::test_muestra_el_catalogo_con_los_obtenidos` |
+| CP-313 | La migración crea la tabla `logros_jugador` | PostgreSQL 16 con la base en la migración anterior (`b124d9b1c989`) | `alembic upgrade head`, `downgrade -1`, `upgrade head` y `alembic check` | La tabla se crea con la restricción única `uq_logro_por_jugador` (jugador y logro); baja y sube sin errores; `check` sin diferencias con los modelos | OK | I, CI | CI (paso "Migraciones (alembic)" en cada PR); bajar, volver a subir y `check`, a mano el 16/11/2026 |
+| CP-314 | Logros al terminar una partida real | Backend local, dos cuentas verificadas, la base sin logros para esas cuentas; el motor ya termina la partida (US-17) | Jugar una partida completa; el jugador 1 saca 300 de energía del reactor y gana | En `logros_jugador`: jugador 1 con `primera_partida`, `primera_victoria` y `energia_300`; jugador 2 con `primera_partida`. `GET /logros` de cada uno coincide con la tabla | **Pendiente** | A | Manual (procedimiento abajo) |
+
+### Fuera de estos casos
+
+- **Retos con puntos extra:** no están hechos. Cambian el puntaje antes de decidir al ganador, así
+  que se coordinan con el fin de partida (US-17). Se agregan casos cuando existan.
+- **Mostrar los logros** en el historial (US-20) y en la ceremonia (US-18), task AB#118: dependen
+  de esas pantallas. Mientras tanto se consultan con `GET /logros`.
+- **Logro por terminar sin que un guardián te alcance:** depende de los guardianes (US-15).
+
 ## Cómo ejecutar los casos de aceptación
 
 1. Cargar el firmware (`hardware/firmware/control_reactor/control_reactor.ino`) en el Arduino Uno y
@@ -122,6 +172,13 @@ Entrada. Revisar el puntaje del jugador y la barra de energía del reactor. Al 1
 todavía no dibuja el reactor ni el puntaje: este caso se ejecuta cuando estén la arena visual y el
 HUD (US-24).
 
+**CP-314 (logros en una partida real):** con `docker compose up` en la raíz, entrar con dos cuentas
+(una con el control y otra con el teclado) a la misma partida y jugarla hasta el final. Después, en
+otra terminal: `docker compose exec db psql -U reactor -d reactor -c "SELECT jugador_id, logro,
+partida_id FROM logros_jugador ORDER BY jugador_id;"` y comparar con `GET /logros` de cada jugador
+(en `http://localhost:8000/docs`, con el token de esa cuenta). Sirve también para la parte de la
+defensa en que se muestra cómo cambian las tablas.
+
 Evidencia: captura o video de cada caso en la Wiki, página "Casos de prueba" del Sprint 3.
 
 ## Regresión
@@ -130,6 +187,8 @@ Las pruebas automáticas que cubren el control y el movimiento desde el Sprint 2
 los casos de movimiento de la US-25) se vuelven a ejecutar en cada Pull Request en el CI, junto con
 las de este documento. Ejecución del 16/11/2026 sobre `develop` (`05d70da`, después de mergear el
 PR #50): **263 pruebas del servidor, 193 del cliente y las del firmware pasan**, sin fallos.
+Ejecución del 16/11/2026 sobre `develop` (`ca10ea7`, con la US-27 y el PR #49 ya mergeados):
+**278 pruebas del servidor** (incluidas las 15 de `s/test_logros.py`) **y 193 del cliente pasan**.
 
 Para repetirlas: `python -m pytest -q` dentro de `server/` y de `client/` (el cliente con
 `SDL_VIDEODRIVER=dummy`), y el firmware con los comandos de `hardware/firmware/README.md`.

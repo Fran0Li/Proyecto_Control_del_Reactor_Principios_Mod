@@ -16,7 +16,14 @@ from typing import Protocol
 from app.realtime.acciones import AccionContextual
 from app.realtime.arena import Arena, arena_basica
 from app.realtime.celdas import RecolectorCeldas
-from app.realtime.eventos import ACCION_REALIZADA, ESTADO_ACTUALIZADO, EventoPartida
+from app.realtime.estados_jugador import EstadoJugador, Normal
+from app.realtime.eventos import (
+    ACCION_REALIZADA,
+    ESTADO_ACTUALIZADO,
+    JUGADOR_PENALIZADO,
+    EventoPartida,
+)
+from app.realtime.guardianes import Guardian
 from app.realtime.obstaculos import GestorObstaculos
 from app.realtime.reactor import ExtraccionReactor
 
@@ -24,6 +31,7 @@ log = logging.getLogger(__name__)
 
 VELOCIDAD = 120.0  # píxeles por segundo
 CICLO_S = 0.05  # un tick cada 50 ms (contrato de hardware, RNF-02)
+PENALIZACION_PUNTOS = 5  # lo que pierde el jugador al ser alcanzado por un guardián
 DIRECCIONES = {"arriba": (0, -1), "abajo": (0, 1), "izquierda": (-1, 0), "derecha": (1, 0)}
 
 
@@ -38,6 +46,7 @@ class JugadorEnArena:
     y: float
     presionados: set[str] = field(default_factory=set)
     puntaje: int = 0
+    estado: EstadoJugador = field(default_factory=Normal)
 
 
 class MotorPartida:
@@ -46,6 +55,7 @@ class MotorPartida:
         partida_id: int,
         arena: Arena | None = None,
         acciones: list[AccionContextual] | None = None,
+        guardianes: list[Guardian] | None = None,
     ) -> None:
         self.partida_id = partida_id
         self.arena = arena if arena is not None else arena_basica()
@@ -57,6 +67,8 @@ class MotorPartida:
         )
         # Las celdas de energía se recogen al tocarlas y reaparecen solas (ver celdas.py)
         self._celdas = RecolectorCeldas(self.arena.celdas, self.arena.radio_jugador)
+        # Los guardianes se mueven solos y penalizan al jugador que alcanzan (ver guardianes.py)
+        self._guardianes: list[Guardian] = list(guardianes) if guardianes else []
         self._obstaculos = GestorObstaculos(self.arena.obstaculos, self.arena.radio_jugador)
         self._observadores: list[ObservadorPartida] = []
         self._jugadores: dict[int, JugadorEnArena] = {}
@@ -65,7 +77,7 @@ class MotorPartida:
         self._ticks = 0  # ticks desde que arrancó el motor (el tiempo de la partida)
         self._tarea: asyncio.Task | None = None
 
-    # observadores 
+    # observadores
 
     def suscribir(self, observador: ObservadorPartida) -> None:
         self._observadores.append(observador)
@@ -80,7 +92,7 @@ class MotorPartida:
             except Exception:  # un observador que falla no detiene la partida
                 log.exception("Falló un observador de la partida %s", self.partida_id)
 
-    #  jugadores 
+    #  jugadores
 
     @property
     def hay_jugadores(self) -> bool:
@@ -119,7 +131,7 @@ class MotorPartida:
         """Segundos de partida según los ticks (se cuentan enteros para no acumular error)."""
         return self._ticks * CICLO_S
 
-    # entradas y movimiento 
+    # entradas y movimiento
 
     def aplicar_entrada(self, jugador_id: int, control: str, estado: str) -> None:
         jugador = self._jugadores.get(jugador_id)
@@ -160,7 +172,7 @@ class MotorPartida:
         for jugador in self._jugadores.values():
             dx = sum(DIRECCIONES[c][0] for c in jugador.presionados)
             dy = sum(DIRECCIONES[c][1] for c in jugador.presionados)
-            if dx == 0 and dy == 0:
+            if (dx == 0 and dy == 0) or not jugador.estado.puede_moverse:
                 continue
             norma = math.hypot(dx, dy)  # en diagonal se avanza igual de rápido que en recta
             velocidad = VELOCIDAD * self._obstaculos.factor_velocidad(jugador.x, jugador.y)
@@ -184,6 +196,43 @@ class MotorPartida:
             self.sumar_puntaje(jugador_id, celda.valor)
             self._hay_cambios = True
 
+    def _actualizar_guardianes(self, dt: float) -> None:
+        """Mueve a los guardianes, avanza el estado de cada jugador y penaliza a los alcanzados."""
+        jugadores = list(self._jugadores.values())
+        for guardian in self._guardianes:
+            if guardian.mover(dt, jugadores):
+                self._hay_cambios = True
+        for jugador in jugadores:
+            nuevo = jugador.estado.actualizar(dt)
+            if nuevo is not jugador.estado:
+                jugador.estado = nuevo
+                self._hay_cambios = True
+            if not jugador.estado.vulnerable:
+                continue
+            for guardian in self._guardianes:
+                if guardian.alcanza(jugador.x, jugador.y, self.arena.radio_jugador):
+                    self._penalizar(jugador, guardian)
+                    break
+
+    def _penalizar(self, jugador: JugadorEnArena, guardian: Guardian) -> None:
+        """Un guardián alcanzó al jugador: queda aturdido y pierde puntos (sin bajar de 0)."""
+        jugador.estado = jugador.estado.golpeado()
+        perdidos = min(PENALIZACION_PUNTOS, jugador.puntaje)
+        self.sumar_puntaje(jugador.jugador_id, -perdidos)
+        self._hay_cambios = True
+        self._eventos_pendientes.append(
+            EventoPartida(
+                JUGADOR_PENALIZADO,
+                self.partida_id,
+                {
+                    "jugador_id": jugador.jugador_id,
+                    "guardian_id": guardian.id,
+                    "puntos": -perdidos,
+                    "estado": jugador.estado.nombre,
+                },
+            )
+        )
+
     def estado(self) -> dict:
         arena = self.arena.a_dict()
         # Solo las celdas que están ahora en el mapa
@@ -197,10 +246,12 @@ class MotorPartida:
                     "x": round(j.x),
                     "y": round(j.y),
                     "puntaje": j.puntaje,
+                    "estado": j.estado.nombre,
                 }
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],
             "arena": arena,
+            "guardianes": [g.a_dict() for g in self._guardianes],
             **{accion.clave: accion.a_dict() for accion in self._acciones},
         }
 
@@ -214,6 +265,7 @@ class MotorPartida:
         if self._obstaculos.actualizar(CICLO_S):
             self._hay_cambios = True  # una puerta se abrió o se cerró
         self._mover(CICLO_S)
+        self._actualizar_guardianes(CICLO_S)
         self._actualizar_celdas()
         eventos, self._eventos_pendientes = self._eventos_pendientes, []
         for evento in eventos:
@@ -222,7 +274,7 @@ class MotorPartida:
             self._hay_cambios = False
             await self._notificar(EventoPartida(ESTADO_ACTUALIZADO, self.partida_id, self.estado()))
 
-    # ciclo 
+    # ciclo
 
     def iniciar(self) -> None:
         if self._tarea is None or self._tarea.done():

@@ -214,7 +214,9 @@ def test_avisa_el_estado_cuando_algo_cambia():
 
     (evento,) = observador.eventos
     assert evento.tipo == ESTADO_ACTUALIZADO and evento.partida_id == 1
-    assert evento.datos["jugadores"] == [{"jugador_id": 7, "x": 240, "y": 135, "puntaje": 0}]
+    assert evento.datos["jugadores"] == [
+        {"jugador_id": 7, "x": 240, "y": 135, "puntaje": 0, "estado": "normal"}
+    ]
 
 
 def test_no_avisa_si_nada_cambio():

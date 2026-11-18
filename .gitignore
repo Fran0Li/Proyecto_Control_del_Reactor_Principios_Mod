@@ -20,3 +20,6 @@ Thumbs.db
 # PlatformIO / Arduino
 hardware/**/.pio/
 hardware/**/build/
+
+# Mediciones de client/probar_control.py
+client/latencia_*.csv

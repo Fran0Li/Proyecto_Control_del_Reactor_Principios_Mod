@@ -1,4 +1,5 @@
-"""Pantalla de lobby: crear una partida (US-07) o ir a buscar una (US-08)."""
+"""Pantalla de lobby: crear una partida (US-07), buscar una (US-08), ver el ranking (US-19) o
+el historial (US-20)."""
 
 import asyncio
 
@@ -28,6 +29,8 @@ class LobbyScreen:
         )
         self.boton_salir = boton_secundario(pygame.Rect(width - 190, 20, 170, 40), "Cerrar sesión")
         self.boton_perfil = boton_secundario(pygame.Rect(width - 370, 20, 170, 40), "Mi perfil")
+        self.boton_historial = boton_secundario(pygame.Rect(width - 550, 20, 170, 40), "Historial")
+        self.boton_ranking = boton_secundario(pygame.Rect(width - 730, 20, 170, 40), "Ranking")
         self.fuente_titulo = pygame.font.Font(None, 64)
         self.fuente_texto = pygame.font.Font(None, 32)
         self.mensaje = ""
@@ -45,9 +48,14 @@ class LobbyScreen:
         if self.boton_buscar.fue_presionado(event):
             self.siguiente_pantalla = "buscar"
             return
-        if self.boton_perfil.fue_presionado(event):
-            self.siguiente_pantalla = "perfil"
-            return
+        for boton, destino in (
+            (self.boton_perfil, "perfil"),
+            (self.boton_historial, "historial"),
+            (self.boton_ranking, "ranking"),
+        ):
+            if boton.fue_presionado(event):
+                self.siguiente_pantalla = destino
+                return
         if self.boton_salir.fue_presionado(event):
             sesion.cerrar()
             self.mensaje = ""
@@ -86,6 +94,8 @@ class LobbyScreen:
         self.boton_buscar.draw(screen)
         self.boton_salir.draw(screen)
         self.boton_perfil.draw(screen)
+        self.boton_historial.draw(screen)
+        self.boton_ranking.draw(screen)
         actual = sesion.actual()
         if actual:
             nombre = self.fuente_texto.render(actual.nombre_usuario, True, (150, 160, 190))

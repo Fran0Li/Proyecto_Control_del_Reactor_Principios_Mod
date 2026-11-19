@@ -120,6 +120,21 @@ async def obtener_resultado(partida_id: int, token: str) -> dict:
     return await _enviar("GET", f"/partidas/{partida_id}/resultado", token=token)
 
 
+async def obtener_ranking(token: str) -> dict:
+    """{"top": [...10 mejores], "yo": puesto propio o None} (US-19)."""
+    return await _enviar("GET", "/ranking", token=token)
+
+
+async def obtener_historial(token: str) -> dict:
+    """{"resumen": {...}, "partidas": [...]} del jugador conectado (US-20)."""
+    return await _enviar("GET", "/historial", token=token)
+
+
+async def obtener_logros(token: str) -> list[dict]:
+    datos = await _enviar("GET", "/logros", token=token)
+    return datos if isinstance(datos, list) else []
+
+
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""
     try:

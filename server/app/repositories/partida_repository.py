@@ -113,6 +113,29 @@ class PartidaRepository:
         )
         return self.db.scalar(consulta)
 
+    def historial(self, jugador_id: int, limite: int) -> list[tuple[Partida, Participacion]]:
+        """Las últimas partidas terminadas del jugador, de la más nueva a la más vieja."""
+        consulta = (
+            select(Partida, Participacion)
+            .join(Participacion, Participacion.partida_id == Partida.id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .order_by(Partida.fecha_fin.desc(), Partida.id.desc())
+            .limit(limite)
+        )
+        return [(partida, participacion) for partida, participacion in self.db.execute(consulta)]
+
+    def resumen_de(self, jugador_id: int) -> tuple[int, int]:
+        """(partidas terminadas, mejor puntaje) del jugador."""
+        consulta = (
+            select(func.count(), func.coalesce(func.max(Participacion.puntaje_final), 0))
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+        )
+        jugadas, mejor = self.db.execute(consulta).one()
+        return jugadas, mejor
+
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         consulta = (
             select(Participacion.id)

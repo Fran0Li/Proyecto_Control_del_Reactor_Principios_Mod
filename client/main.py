@@ -20,9 +20,11 @@ from src.config import FPS, WINDOW_SIZE
 from src.screens.arena import ArenaScreen
 from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.ceremonia import CeremoniaScreen
+from src.screens.historial import HistorialScreen
 from src.screens.lobby import LobbyScreen
 from src.screens.login import LoginScreen
 from src.screens.perfil import PerfilScreen
+from src.screens.ranking import RankingScreen
 from src.screens.recuperar import RecuperarScreen
 from src.screens.registro import RegistroScreen
 from src.screens.verificar_correo import VerificarCorreoScreen
@@ -45,6 +47,8 @@ async def main() -> None:
         "verificar": VerificarCorreoScreen(WINDOW_SIZE[0]),
         "recuperar": RecuperarScreen(WINDOW_SIZE[0]),
         "perfil": PerfilScreen(WINDOW_SIZE[0]),
+        "ranking": RankingScreen(WINDOW_SIZE[0]),
+        "historial": HistorialScreen(WINDOW_SIZE[0]),
         "lobby": lobby,
         "buscar": buscar,
         "arena": arena,

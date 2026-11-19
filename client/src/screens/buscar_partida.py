@@ -102,7 +102,7 @@ class BuscarPartidaScreen:
     async def _unirse(self, partida_id: int) -> None:
         self._mostrar("Uniéndose...", es_error=False)
         try:
-            partida = await unirse_a_partida(partida_id, sesion.jugador_id())
+            partida = await unirse_a_partida(partida_id, sesion.token())
         except ApiError as error:
             self._mostrar(str(error), es_error=True)
             return

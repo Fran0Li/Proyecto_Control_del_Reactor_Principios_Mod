@@ -78,7 +78,7 @@ class LobbyScreen:
 
     async def _crear_partida(self) -> None:
         try:
-            partida = await crear_partida(sesion.jugador_id())
+            partida = await crear_partida(sesion.token())
         except ApiError as error:
             self.mensaje = str(error)
             self.mensaje_es_error = True

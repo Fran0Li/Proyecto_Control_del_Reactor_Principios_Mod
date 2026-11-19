@@ -56,6 +56,15 @@ class UsuarioRepository:
     def existe_nombre_usuario(self, nombre_usuario: str) -> bool:
         return self.obtener_por_nombre_usuario(nombre_usuario) is not None
 
+    def listar(self) -> list[Usuario]:
+        return list(self.db.scalars(select(Usuario).order_by(Usuario.id)))
+
+    def contar(self, solo_bloqueados: bool = False) -> int:
+        consulta = select(func.count()).select_from(Usuario)
+        if solo_bloqueados:
+            consulta = consulta.where(Usuario.bloqueado.is_(True))
+        return self.db.scalar(consulta) or 0
+
     def estadisticas(self, usuario_id: int) -> dict:
         partidas = self.db.scalar(
             select(func.count()).where(Participacion.jugador_id == usuario_id)

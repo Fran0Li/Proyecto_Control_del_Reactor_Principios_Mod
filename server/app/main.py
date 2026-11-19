@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
+    admin,
     auth,
     auth_google,
     canal_partida,
@@ -35,4 +36,5 @@ app.include_router(partidas.router)
 app.include_router(canal_partida.router)
 app.include_router(logros.router)  # US-27
 app.include_router(ranking.router)  # US-19 y US-20
+app.include_router(admin.router)  # US-28
 app.include_router(health.router)

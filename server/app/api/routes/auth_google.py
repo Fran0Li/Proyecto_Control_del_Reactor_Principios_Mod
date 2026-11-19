@@ -16,7 +16,11 @@ from app.api.paginas import pagina_simple
 from app.core.security import crear_token_acceso
 from app.repositories import UsuarioRepository
 from app.services.google_oauth import GoogleError, ProveedorGoogle, crear_proveedor_google
-from app.services.login_social_service import CorreoGoogleSinVerificarError, LoginSocialService
+from app.services.login_social_service import (
+    CorreoGoogleSinVerificarError,
+    CuentaBloqueadaError,
+    LoginSocialService,
+)
 from app.services.sesiones_google import sesiones_google
 
 router = APIRouter(prefix="/auth/google", tags=["autenticación"])
@@ -55,7 +59,7 @@ def callback(
     try:
         perfil = proveedor.obtener_perfil(code)
         usuario = LoginSocialService(UsuarioRepository(db)).entrar_con_google(perfil)
-    except (GoogleError, CorreoGoogleSinVerificarError) as fallo:
+    except (GoogleError, CorreoGoogleSinVerificarError, CuentaBloqueadaError) as fallo:
         return _fallo(state, str(fallo))
 
     sesiones_google.guardar(
@@ -67,6 +71,7 @@ def callback(
                 "id": usuario.id,
                 "nombre_usuario": usuario.nombre_usuario,
                 "correo": usuario.correo,
+                "rol": usuario.rol,
             },
         },
     )

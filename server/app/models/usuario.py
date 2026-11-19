@@ -1,8 +1,12 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import false as sa_false
 
 from app.db.session import Base
+
+ROL_JUGADOR = "jugador"
+ROL_ADMIN = "administrador"  # US-28: se crea con el script app/scripts/crear_admin.py
 
 
 class Usuario(Base):
@@ -21,3 +25,6 @@ class Usuario(Base):
     # perfil (US-06)
     descripcion = Column(String(200), nullable=False, default="", server_default="")
     avatar = Column(String(20), nullable=False, default="azul", server_default="azul")
+    # administración (US-28)
+    rol = Column(String(20), nullable=False, default=ROL_JUGADOR, server_default=ROL_JUGADOR)
+    bloqueado = Column(Boolean, nullable=False, default=False, server_default=sa_false())

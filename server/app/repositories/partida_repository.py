@@ -115,6 +115,32 @@ class PartidaRepository:
         jugadas, mejor = self.db.execute(consulta).one()
         return jugadas, mejor
 
+    def contar_por_estado(self, *estados: EstadoPartida) -> int:
+        consulta = select(func.count()).select_from(Partida).where(Partida.estado.in_(estados))
+        return self.db.scalar(consulta) or 0
+
+    def listar_activas_con_jugadores(self) -> list[tuple[Partida, int]]:
+        """Partidas esperando o en curso, con cuántos jugadores tienen (para el admin, US-28)."""
+        consulta = (
+            select(Partida, func.count(Participacion.id))
+            .outerjoin(Participacion, Participacion.partida_id == Partida.id)
+            .where(Partida.estado.in_(ESTADOS_ACTIVOS))
+            .group_by(Partida.id)
+            .order_by(Partida.id)
+        )
+        return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+
+    def mejores_puntajes(self, limite: int) -> list[tuple[int, int, int]]:
+        """(jugador_id, puntaje, partida_id) de los puntajes más altos en partidas terminadas."""
+        consulta = (
+            select(Participacion.jugador_id, Participacion.puntaje_final, Participacion.partida_id)
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .order_by(Participacion.puntaje_final.desc(), Participacion.id)
+            .limit(limite)
+        )
+        return [tuple(fila) for fila in self.db.execute(consulta).all()]
+
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         consulta = (
             select(Participacion.id)

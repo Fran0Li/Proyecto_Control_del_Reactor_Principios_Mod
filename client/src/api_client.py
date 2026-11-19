@@ -97,8 +97,10 @@ async def editar_perfil(token: str, cambios: dict) -> dict:
     return await _enviar("PATCH", "/perfil", cambios, token=token)
 
 
-async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
-    return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
+async def crear_partida(token: str, escenario: str | None = None) -> dict:
+    """El servidor toma al creador del token."""
+    return await _enviar("POST", "/partidas", {"escenario": escenario}, token=token)
+
 
 
 async def listar_partidas_disponibles() -> list[dict]:
@@ -106,8 +108,9 @@ async def listar_partidas_disponibles() -> list[dict]:
     return datos if isinstance(datos, list) else []
 
 
-async def unirse_a_partida(partida_id: int, jugador_id: int) -> dict:
-    return await _enviar("POST", f"/partidas/{partida_id}/unirse", {"jugador_id": jugador_id})
+async def unirse_a_partida(partida_id: int, token: str) -> dict:
+    """Se une el jugador del token."""
+    return await _enviar("POST", f"/partidas/{partida_id}/unirse", token=token)
 
 
 async def iniciar_partida(partida_id: int, token: str) -> dict:

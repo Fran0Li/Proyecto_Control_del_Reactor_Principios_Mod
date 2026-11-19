@@ -1,5 +1,6 @@
 """Servicio de partidas (US-07 y US-08)."""
 
+from app.core.config import settings
 from app.models.partida import EstadoPartida, Partida
 from app.repositories import PartidaRepository
 from app.services.partida_factory import MAX_JUGADORES, PartidaFactory
@@ -19,6 +20,14 @@ class PartidaNoDisponibleError(Exception):
 
 class PartidaLlenaError(Exception):
     """La partida ya alcanzó el máximo de jugadores."""
+
+
+class NoEsCreadorError(Exception):
+    """Solo quien creó la partida puede iniciarla."""
+
+
+class FaltanJugadoresError(Exception):
+    """La partida necesita al menos `partida_minimo_jugadores` para empezar."""
 
 
 class PartidaService:
@@ -66,3 +75,17 @@ class PartidaService:
         return partida, self.repo.contar_participantes(partida_id)
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         return self.repo.es_participante(partida_id, jugador_id)
+
+    def iniciar_partida(self, partida_id: int, jugador_id: int) -> Partida:
+        """Pasa la partida de esperando a en curso (US-17). Solo la inicia quien la creó."""
+        partida = self.repo.obtener_por_id(partida_id)
+        if partida is None:
+            raise PartidaNoEncontradaError(f"La partida {partida_id} no existe")
+        if self.repo.creador(partida_id) != jugador_id:
+            raise NoEsCreadorError("Solo quien creó la partida puede iniciarla")
+        if partida.estado != EstadoPartida.esperando:
+            raise PartidaNoDisponibleError("La partida ya empezó o terminó")
+        minimo = settings.partida_minimo_jugadores
+        if self.repo.contar_participantes(partida_id) < minimo:
+            raise FaltanJugadoresError(f"Se necesitan al menos {minimo} jugadores para empezar")
+        return self.repo.cambiar_estado(partida, EstadoPartida.en_curso)

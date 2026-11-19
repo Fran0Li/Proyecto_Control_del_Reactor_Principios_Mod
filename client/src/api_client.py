@@ -132,6 +132,30 @@ async def obtener_logros(token: str) -> list[dict]:
     return datos if isinstance(datos, list) else []
 
 
+# administración (US-28): el servidor responde 403 si la cuenta no es de administrador
+
+
+async def admin_estadisticas(token: str) -> dict:
+    return await _enviar("GET", "/admin/estadisticas", token=token)
+
+
+async def admin_usuarios(token: str) -> list[dict]:
+    return await _enviar("GET", "/admin/usuarios", token=token)
+
+
+async def admin_partidas(token: str) -> list[dict]:
+    return await _enviar("GET", "/admin/partidas", token=token)
+
+
+async def admin_bloquear(token: str, usuario_id: int, bloquear: bool) -> dict:
+    accion = "bloquear" if bloquear else "desbloquear"
+    return await _enviar("POST", f"/admin/usuarios/{usuario_id}/{accion}", token=token)
+
+
+async def admin_cerrar_partida(token: str, partida_id: int) -> dict:
+    return await _enviar("POST", f"/admin/partidas/{partida_id}/cerrar", token=token)
+
+
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""
     try:

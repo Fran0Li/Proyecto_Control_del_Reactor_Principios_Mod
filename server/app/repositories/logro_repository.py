@@ -22,6 +22,15 @@ class LogroRepository:
         )
         return list(self.db.scalars(consulta))
 
+    def de_partida(self, partida_id: int) -> list[LogroJugador]:
+        """Los logros que se desbloquearon en una partida (para la ceremonia, US-18)."""
+        consulta = (
+            select(LogroJugador)
+            .where(LogroJugador.partida_id == partida_id)
+            .order_by(LogroJugador.id)
+        )
+        return list(self.db.scalars(consulta))
+
     def agregar(self, jugador_id: int, claves: Iterable[str], partida_id: int | None) -> None:
         """Guarda logros nuevos. Quien llama ya descartó los que el jugador tenía; la restricción
         única de la tabla evita duplicados aunque dos evaluaciones coincidan."""

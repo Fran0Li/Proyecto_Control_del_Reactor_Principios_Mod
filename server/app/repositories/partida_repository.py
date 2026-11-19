@@ -81,6 +81,17 @@ class PartidaRepository:
             .order_by(Partida.id)
         )
         return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+    def mejor_puntaje_antes(self, jugador_id: int, partida_id: int) -> int | None:
+        """El mejor puntaje del jugador en las partidas que terminó antes de esta."""
+        consulta = (
+            select(func.max(Participacion.puntaje_final))
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .where(Partida.id < partida_id)
+        )
+        return self.db.scalar(consulta)
+
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         consulta = (
             select(Participacion.id)

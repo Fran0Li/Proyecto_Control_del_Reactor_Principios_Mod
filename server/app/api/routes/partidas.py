@@ -1,4 +1,4 @@
-"""Endpoints de partidas (US-07)."""
+"""Endpoints de partidas (US-07, US-08, US-17 y el resultado para la ceremonia de la US-18)."""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,7 +10,12 @@ from app.api.dependencias import UsuarioActual
 from app.db.session import get_session
 from app.models.partida import EstadoPartida
 from app.realtime.gestor_motores import gestor_motores
-from app.repositories import PartidaRepository, UsuarioRepository
+from app.repositories import (
+    EventoRepository,
+    LogroRepository,
+    PartidaRepository,
+    UsuarioRepository,
+)
 from app.services.partida_service import (
     FaltanJugadoresError,
     JugadorYaEnPartidaError,
@@ -20,6 +25,7 @@ from app.services.partida_service import (
     PartidaNoEncontradaError,
     PartidaService,
 )
+from app.services.resultado_service import PartidaSinTerminarError, ResultadoService
 
 router = APIRouter(prefix="/partidas", tags=["partidas"])
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -123,3 +129,41 @@ async def iniciar_partida(partida_id: int, usuario: UsuarioActual, db: SessionDe
     motor = gestor_motores.obtener(partida_id)
     motor.iniciar_partida(partida.tiempo_limite_segundos, partida.puntuacion_objetivo)
     return partida
+
+
+class LogroGanadoResponse(BaseModel):
+    clave: str
+    nombre: str
+
+
+class JugadorResultadoResponse(BaseModel):
+    jugador_id: int
+    nombre: str
+    puntaje: int
+    posicion: int | None
+    acciones: int
+    penalizaciones: int
+    logros: list[LogroGanadoResponse]
+    record_personal: bool
+
+
+class ResultadoResponse(BaseModel):
+    partida_id: int
+    motivo: str | None
+    duracion_s: float | None
+    ganador_id: int | None
+    jugadores: list[JugadorResultadoResponse]
+
+
+@router.get("/{partida_id}/resultado", response_model=ResultadoResponse)
+def resultado_partida(partida_id: int, usuario: UsuarioActual, db: SessionDep):
+    """Podio, estadísticas y récords de una partida terminada (US-18)."""
+    servicio = ResultadoService(
+        PartidaRepository(db), UsuarioRepository(db), EventoRepository(db), LogroRepository(db)
+    )
+    try:
+        return servicio.resultado(partida_id)
+    except PartidaNoEncontradaError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    except PartidaSinTerminarError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error

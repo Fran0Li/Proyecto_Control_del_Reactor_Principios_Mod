@@ -112,6 +112,11 @@ async def iniciar_partida(partida_id: int, token: str) -> dict:
     """Solo el creador puede iniciarla (US-17); el servidor avisa a todos por el canal."""
     return await _enviar("POST", f"/partidas/{partida_id}/iniciar", token=token)
 
+async def obtener_resultado(partida_id: int, token: str) -> dict:
+    """Podio y estadísticas de una partida terminada (US-18). Da 409 mientras se guarda."""
+    return await _enviar("GET", f"/partidas/{partida_id}/resultado", token=token)
+
+
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""
     try:

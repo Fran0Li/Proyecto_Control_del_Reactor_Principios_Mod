@@ -1,8 +1,11 @@
 """Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía.
 
-Encima van el reloj y la tabla de posiciones (US-24); cuando la partida termina (US-17) se pone
-un cuadro con las posiciones finales.
+Encima van el reloj y la tabla de posiciones (US-24). Cuando la partida termina (US-17) se pone
+un cuadro con las posiciones finales y a los pocos segundos se pasa a la ceremonia (US-18).
 """
+
+import time
+from collections.abc import Callable
 
 import pygame
 
@@ -21,6 +24,7 @@ AMARILLO = (240, 190, 20)
 RADIO_CELDA = 10  # el servidor usa el mismo radio para saber cuándo se recoge una celda
 SUAVIZADO = 0.35  # cuánto se acerca al punto nuevo en cada cuadro (el servidor manda ~20 por s)
 CONTROLES = ("arriba", "abajo", "izquierda", "derecha", "accion")
+ESPERA_CEREMONIA_S = 3.0  # cuánto se ve el cuadro de posiciones antes de la ceremonia (US-18)
 MOTIVOS = {
     "tiempo": "Se acabó el tiempo",
     "puntaje": "Alguien llegó al puntaje objetivo",
@@ -29,8 +33,12 @@ MOTIVOS = {
 
 
 class ArenaScreen:
-    def __init__(self, ancho: int, alto: int) -> None:
+    def __init__(
+        self, ancho: int, alto: int, reloj: Callable[[], float] = time.monotonic
+    ) -> None:
         self.ancho, self.alto = ancho, alto
+        self._reloj = reloj
+        self._terminada_en: float | None = None  # cuándo llegó el fin de la partida
         self.siguiente_pantalla: str | None = None
         self.activa = False
         self.panel: PanelCanal | None = None
@@ -54,6 +62,7 @@ class ArenaScreen:
             fuentes = crear_fuentes(self.ancho, self.alto, CONTROL_PUERTO)
             self.controles = ControlesJugador(fuentes, panel.canal.enviar)
         self.aviso_control = AvisoControl()
+        self._terminada_en = None
         self.activa = True
 
     def cerrar(self) -> None:
@@ -94,6 +103,18 @@ class ArenaScreen:
             self.aviso_control.observar(control.estado if control is not None else None)
         if self.panel.estado is not None:
             self._acercar(self.panel.estado["jugadores"])
+        self._revisar_fin()
+
+    def _revisar_fin(self) -> None:
+        """Unos segundos después del fin de la partida se pasa a la ceremonia."""
+        if getattr(self.panel, "resultado", None) is None:
+            return
+        if self._terminada_en is None:
+            self._terminada_en = self._reloj()
+        elif self._reloj() - self._terminada_en >= ESPERA_CEREMONIA_S:
+            self._soltar_todo()
+            self.cerrar()
+            self.siguiente_pantalla = "ceremonia"
 
     def _acercar(self, jugadores: list[dict]) -> None:
         """Mueve lo dibujado hacia lo que dice el servidor, para que no avance a saltos."""
@@ -151,7 +172,7 @@ class ArenaScreen:
             nombre = jugador["nombre"] or f"Jugador {jugador['jugador_id']}"
             fila = f"{jugador['posicion']}.  {nombre}  -  {jugador['puntaje']}"
             lineas.append((self.fuente, fila))
-        lineas.append((self.fuente, "Esc para volver"))
+        lineas.append((self.fuente, "La ceremonia empieza en un momento..."))
         y = self.alto // 2 - 30 * len(lineas)
         for fuente, texto in lineas:
             imagen = fuente.render(texto, True, BLANCO)

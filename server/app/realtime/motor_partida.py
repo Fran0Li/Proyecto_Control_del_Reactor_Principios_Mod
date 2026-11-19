@@ -21,11 +21,14 @@ from app.realtime.eventos import (
     ACCION_REALIZADA,
     ESTADO_ACTUALIZADO,
     JUGADOR_PENALIZADO,
+    PARTIDA_FINALIZADA,
+    PARTIDA_INICIADA,
     EventoPartida,
 )
 from app.realtime.guardianes import Guardian
 from app.realtime.obstaculos import GestorObstaculos
 from app.realtime.reactor import ExtraccionReactor
+from app.realtime.reglas_victoria import ReglasVictoria, ganador, ordenar
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +36,12 @@ VELOCIDAD = 120.0  # píxeles por segundo
 CICLO_S = 0.05  # un tick cada 50 ms (contrato de hardware, RNF-02)
 PENALIZACION_PUNTOS = 5  # lo que pierde el jugador al ser alcanzado por un guardián
 DIRECCIONES = {"arriba": (0, -1), "abajo": (0, 1), "izquierda": (-1, 0), "derecha": (1, 0)}
+
+# Ciclo de la partida (US-17). Antes de iniciar los jugadores pueden moverse por la arena para
+# probar el control, pero no corre el reloj ni se gana; al iniciar todo vuelve a cero.
+ESPERANDO = "esperando"
+EN_CURSO = "en_curso"
+FINALIZADA = "finalizada"
 
 
 class ObservadorPartida(Protocol):
@@ -47,6 +56,8 @@ class JugadorEnArena:
     presionados: set[str] = field(default_factory=set)
     puntaje: int = 0
     estado: EstadoJugador = field(default_factory=Normal)
+    nombre: str = ""
+    conectado: bool = True
 
 
 class MotorPartida:
@@ -76,6 +87,11 @@ class MotorPartida:
         self._eventos_pendientes: list[EventoPartida] = []
         self._ticks = 0  # ticks desde que arrancó el motor (el tiempo de la partida)
         self._tarea: asyncio.Task | None = None
+        self.estado_partida = ESPERANDO
+        self._reglas: ReglasVictoria | None = None
+        self._tick_inicio = 0
+        self._tick_fin = 0
+        self._segundos_mostrados: int | None = None  # para avisar cuando cambia el reloj
 
     # observadores
 
@@ -96,25 +112,39 @@ class MotorPartida:
 
     @property
     def hay_jugadores(self) -> bool:
-        return bool(self._jugadores)
+        """Si queda alguien conectado (en una partida en curso se guardan también los que se
+        fueron, para que su puntaje cuente al final)."""
+        return any(j.conectado for j in self._jugadores.values())
 
     def controles_presionados(self, jugador_id: int) -> frozenset[str]:
         jugador = self._jugadores.get(jugador_id)
         return frozenset(jugador.presionados) if jugador is not None else frozenset()
 
-    def agregar_jugador(self, jugador_id: int) -> None:
+    def agregar_jugador(self, jugador_id: int, nombre: str = "") -> None:
         """Pone al jugador en su punto de inicio. Si ya estaba (reconexión), conserva su
         posición y le suelta todos los controles."""
         existente = self._jugadores.get(jugador_id)
         if existente is not None:
             existente.presionados.clear()
+            existente.conectado = True
+            existente.nombre = nombre or existente.nombre
         else:
             puntos = self.arena.puntos_inicio
             x, y = puntos[len(self._jugadores) % len(puntos)]
-            self._jugadores[jugador_id] = JugadorEnArena(jugador_id, float(x), float(y))
+            self._jugadores[jugador_id] = JugadorEnArena(
+                jugador_id, float(x), float(y), nombre=nombre
+            )
         self._hay_cambios = True
 
     def quitar_jugador(self, jugador_id: int) -> None:
+        if self.estado_partida == EN_CURSO:
+            # Se queda en la partida (puede volver y su puntaje cuenta al final)
+            jugador = self._jugadores.get(jugador_id)
+            if jugador is not None:
+                jugador.conectado = False
+                jugador.presionados.clear()
+                self._hay_cambios = True
+            return
         if self._jugadores.pop(jugador_id, None) is not None:
             self._hay_cambios = True
 
@@ -131,11 +161,99 @@ class MotorPartida:
         """Segundos de partida según los ticks (se cuentan enteros para no acumular error)."""
         return self._ticks * CICLO_S
 
+    # inicio y fin de la partida (US-17, US-22)
+
+    @property
+    def transcurrido(self) -> float:
+        """Segundos desde que se inició la partida (0 si todavía no empieza)."""
+        if self.estado_partida == ESPERANDO:
+            return 0.0
+        fin = self._tick_fin if self.estado_partida == FINALIZADA else self._ticks
+        return (fin - self._tick_inicio) * CICLO_S
+
+    def iniciar_partida(self, tiempo_limite_s: float, puntaje_objetivo: int) -> bool:
+        """Arranca el reloj. Todos vuelven a su punto de inicio con 0 puntos.
+        Devuelve False si la partida ya había empezado."""
+        if self.estado_partida != ESPERANDO:
+            return False
+        puntos = self.arena.puntos_inicio
+        jugadores = sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
+        for indice, jugador in enumerate(jugadores):
+            jugador.x, jugador.y = (float(v) for v in puntos[indice % len(puntos)])
+            jugador.puntaje = 0
+            jugador.estado = Normal()
+            jugador.presionados.clear()
+        self._celdas = RecolectorCeldas(self.arena.celdas, self.arena.radio_jugador)
+        self._reglas = ReglasVictoria(tiempo_limite_s, puntaje_objetivo)
+        self._tick_inicio = self._ticks
+        self.estado_partida = EN_CURSO
+        self._hay_cambios = True
+        self._eventos_pendientes.append(
+            EventoPartida(
+                PARTIDA_INICIADA,
+                self.partida_id,
+                {
+                    "tiempo_limite": tiempo_limite_s,
+                    "puntaje_objetivo": puntaje_objetivo,
+                    "jugadores": [j.jugador_id for j in jugadores],
+                },
+            )
+        )
+        return True
+
+    def terminar(self, motivo: str) -> bool:
+        """Cierra la partida y ordena a los jugadores. Devuelve False si no estaba en curso."""
+        if self.estado_partida != EN_CURSO:
+            return False
+        self.estado_partida = FINALIZADA
+        self._tick_fin = self._ticks
+        posiciones = ordenar(
+            [(j.jugador_id, j.nombre, j.puntaje) for j in self._jugadores.values()]
+        )
+        for jugador in self._jugadores.values():
+            jugador.presionados.clear()
+        self._hay_cambios = True
+        self._eventos_pendientes.append(
+            EventoPartida(
+                PARTIDA_FINALIZADA,
+                self.partida_id,
+                {
+                    "puntajes": {p.jugador_id: p.puntaje for p in posiciones},
+                    "ganador_id": ganador(posiciones),
+                    "posiciones": [p.a_dict() for p in posiciones],
+                    "motivo": motivo,
+                    "duracion_s": round(self.transcurrido),
+                },
+            )
+        )
+        return True
+
+    def _revisar_fin(self) -> None:
+        if self.estado_partida != EN_CURSO or self._reglas is None:
+            return
+        segundos = math.ceil(self._reglas.tiempo_restante(self.transcurrido))
+        if segundos != self._segundos_mostrados:
+            self._segundos_mostrados = segundos
+            self._hay_cambios = True  # el reloj de los jugadores cambia una vez por segundo
+        motivo = self._reglas.motivo_de_fin(
+            self.transcurrido, [j.puntaje for j in self._jugadores.values()]
+        )
+        if motivo is not None:
+            self.terminar(motivo)
+
+    def _info_partida(self) -> dict:
+        info: dict = {"estado": self.estado_partida}
+        if self._reglas is not None:
+            info["tiempo_limite"] = self._reglas.tiempo_limite_s
+            info["puntaje_objetivo"] = self._reglas.puntaje_objetivo
+            info["tiempo_restante"] = math.ceil(self._reglas.tiempo_restante(self.transcurrido))
+        return info
+
     # entradas y movimiento
 
     def aplicar_entrada(self, jugador_id: int, control: str, estado: str) -> None:
         jugador = self._jugadores.get(jugador_id)
-        if jugador is None:
+        if jugador is None or self.estado_partida == FINALIZADA:
             return
         if control == "accion":
             if estado == "presionado":  # soltar la acción no hace nada (contrato)
@@ -247,11 +365,13 @@ class MotorPartida:
                     "y": round(j.y),
                     "puntaje": j.puntaje,
                     "estado": j.estado.nombre,
+                    "nombre": j.nombre,
                 }
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],
             "arena": arena,
             "guardianes": [g.a_dict() for g in self._guardianes],
+            "partida": self._info_partida(),
             **{accion.clave: accion.a_dict() for accion in self._acciones},
         }
 
@@ -259,14 +379,16 @@ class MotorPartida:
         """Un ciclo del motor: avanza las acciones, mueve a los jugadores y, si algo cambió,
         avisa a todos. Las acciones que pasaron desde el tick anterior se avisan primero."""
         self._ticks += 1
-        for accion in self._acciones:
-            if accion.actualizar(CICLO_S):
-                self._hay_cambios = True
-        if self._obstaculos.actualizar(CICLO_S):
-            self._hay_cambios = True  # una puerta se abrió o se cerró
-        self._mover(CICLO_S)
-        self._actualizar_guardianes(CICLO_S)
-        self._actualizar_celdas()
+        if self.estado_partida != FINALIZADA:  # terminada, la arena se queda quieta
+            for accion in self._acciones:
+                if accion.actualizar(CICLO_S):
+                    self._hay_cambios = True
+            if self._obstaculos.actualizar(CICLO_S):
+                self._hay_cambios = True  # una puerta se abrió o se cerró
+            self._mover(CICLO_S)
+            self._actualizar_guardianes(CICLO_S)
+            self._actualizar_celdas()
+            self._revisar_fin()
         eventos, self._eventos_pendientes = self._eventos_pendientes, []
         for evento in eventos:
             await self._notificar(evento)

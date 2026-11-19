@@ -25,6 +25,10 @@ class Settings:
     # Login con Google (US-04). Cómo crearlas: docs/google-oauth.md
     google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    # Reglas de la partida (US-17, US-22). Se pueden bajar para una demo corta.
+    partida_tiempo_limite_s: int = int(os.getenv("PARTIDA_TIEMPO_LIMITE_S") or 300)
+    partida_puntaje_objetivo: int = int(os.getenv("PARTIDA_PUNTAJE_OBJETIVO") or 500)
+    partida_minimo_jugadores: int = int(os.getenv("PARTIDA_MINIMO_JUGADORES") or 2)
 
 
 settings = Settings()

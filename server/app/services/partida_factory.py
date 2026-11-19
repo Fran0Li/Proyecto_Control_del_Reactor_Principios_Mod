@@ -2,6 +2,7 @@
 
 import random
 
+from app.core.config import settings
 from app.models.partida import EstadoPartida, Partida
 
 ESCENARIOS = (
@@ -11,8 +12,8 @@ ESCENARIOS = (
     "centro_investigacion",
     "complejo_militar",
 )
-TIEMPO_LIMITE_SEGUNDOS = 300
-PUNTUACION_OBJETIVO = 500
+TIEMPO_LIMITE_SEGUNDOS = settings.partida_tiempo_limite_s  # 300 si no se cambia en el .env
+PUNTUACION_OBJETIVO = settings.partida_puntaje_objetivo  # 500 si no se cambia en el .env
 MAX_JUGADORES = 4
 
     

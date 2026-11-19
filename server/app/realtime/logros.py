@@ -4,9 +4,9 @@ Un logro es una condición sobre lo que hizo un jugador en una partida. Se eval�
 partida (evento `partida_finalizada`) y cada uno se gana una sola vez.
 
 Agregar un logro es agregar una entrada a CATALOGO: el evaluador no cambia (abierto/cerrado, igual
-que las acciones del contexto del ADR 0011). Si un logro necesita un dato que todavía no existe
-(por ejemplo, "terminar sin ser alcanzado por un guardián", que depende de la US-15), primero se
-agrega el dato a EstadisticasJugador desde el evento que lo produce.
+que las acciones del contexto del ADR 0011). Si un logro necesita un dato que todavía no existe,
+primero se agrega el dato a EstadisticasJugador desde el evento que lo produce (así se agregó
+`penalizaciones`, desde `jugador_penalizado` de los guardianes de la US-15).
 """
 
 from collections.abc import Callable
@@ -22,6 +22,7 @@ class EstadisticasJugador:
     jugador_id: int
     energia_reactor: int = 0  # puntos sacados del reactor (US-11)
     extracciones: int = 0
+    penalizaciones: int = 0  # veces que lo alcanzó un guardián (US-15)
     puntaje_final: int = 0
     gano: bool = False
 
@@ -52,6 +53,13 @@ CATALOGO: tuple[Logro, ...] = (
         "Sobrecarga",
         f"Extraé {ENERGIA_PARA_LOGRO} de energía del reactor en una sola partida.",
         lambda e: e.energia_reactor >= ENERGIA_PARA_LOGRO,
+    ),
+    Logro(
+        "intocable",
+        "Intocable",
+        "Terminá una partida con puntos sin que te alcance ningún guardián.",
+        # con puntos: quedarse quieto en una esquina no cuenta
+        lambda e: e.penalizaciones == 0 and e.puntaje_final > 0,
     ),
 )
 

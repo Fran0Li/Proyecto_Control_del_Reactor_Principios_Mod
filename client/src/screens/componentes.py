@@ -1,6 +1,10 @@
 """Componentes de interfaz reutilizables entre pantallas."""
 
+from collections.abc import Callable
+
 import pygame
+
+from src.navegador import es_pantalla_tactil, pedir_texto
 
 COLOR_CAMPO = (24, 32, 56)
 COLOR_BORDE = (60, 80, 120)
@@ -25,15 +29,27 @@ class CampoTexto:
         self.activo = False
         self.fuente = pygame.font.Font(None, 30)
         self.fuente_etiqueta = pygame.font.Font(None, 24)
+        # en el celular el teclado no sale solo: al tocar el campo se pide el texto al navegador
+        self.pedir_texto: Callable[[str, str], str | None] | None = (
+            pedir_texto if es_pantalla_tactil() else None
+        )
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.activo = self.rect.collidepoint(event.pos)
+            if self.activo and self.pedir_texto is not None:
+                self._escribir_con_el_teclado_del_celular()
         elif event.type == pygame.KEYDOWN and self.activo:
             if event.key == pygame.K_BACKSPACE:
                 self.texto = self.texto[:-1]
             elif event.unicode.isprintable() and len(self.texto) < self.largo_maximo:
                 self.texto += event.unicode
+
+    def _escribir_con_el_teclado_del_celular(self) -> None:
+        actual = "" if self.oculto else self.texto  # la contraseña no se muestra en el cuadro
+        nuevo = self.pedir_texto(self.etiqueta, actual)
+        if nuevo is not None:  # None: el jugador canceló y queda lo que había
+            self.texto = nuevo.strip("\n")[: self.largo_maximo]
 
     def draw(self, screen: pygame.Surface) -> None:
         etiqueta = self.fuente_etiqueta.render(self.etiqueta, True, COLOR_ETIQUETA)

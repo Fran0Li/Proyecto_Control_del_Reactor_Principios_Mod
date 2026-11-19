@@ -32,8 +32,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 
 class CrearPartidaRequest(BaseModel):
-    creador_id: int
-    escenario: str | None = None
+    escenario: str | None = None  # el creador es quien manda el token
 
 
 class PartidaResponse(BaseModel):
@@ -68,32 +67,26 @@ def listar_partidas_disponibles(db: SessionDep):
     ]
 
 @router.post("", response_model=PartidaResponse, status_code=status.HTTP_201_CREATED)
-def crear_partida(datos: CrearPartidaRequest, db: SessionDep):
-    if UsuarioRepository(db).obtener_por_id(datos.creador_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Jugador no encontrado")
-
+def crear_partida(
+    usuario: UsuarioActual, db: SessionDep, datos: CrearPartidaRequest | None = None
+):
+    """El jugador sale del token, así nadie crea partidas a nombre de otro."""
+    escenario = datos.escenario if datos is not None else None
     servicio = PartidaService(PartidaRepository(db))
     try:
-        return servicio.crear_partida(datos.creador_id, datos.escenario)
+        return servicio.crear_partida(usuario.id, escenario)
     except JugadorYaEnPartidaError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 
 
-
-class UnirsePartidaRequest(BaseModel):
-    jugador_id: int
-
-
 @router.post("/{partida_id}/unirse", response_model=PartidaDisponibleResponse)
-def unirse_a_partida(partida_id: int, datos: UnirsePartidaRequest, db: SessionDep):
-    if UsuarioRepository(db).obtener_por_id(datos.jugador_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Jugador no encontrado")
-
+def unirse_a_partida(partida_id: int, usuario: UsuarioActual, db: SessionDep):
+    """Se une el jugador del token."""
     servicio = PartidaService(PartidaRepository(db))
     try:
-        partida, jugadores = servicio.unirse_a_partida(partida_id, datos.jugador_id)
+        partida, jugadores = servicio.unirse_a_partida(partida_id, usuario.id)
     except PartidaNoEncontradaError as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
     except (

@@ -123,7 +123,14 @@ def test_el_jugador_recibe_su_posicion_inicial_al_entrar(client, db_session):
 
     x, y = PUNTOS_DE_INICIO[0]
     assert estado["jugadores"] == [
-        {"jugador_id": ana, "x": x, "y": y, "puntaje": 0, "estado": "normal"}
+        {
+            "jugador_id": ana,
+            "x": x,
+            "y": y,
+            "puntaje": 0,
+            "estado": "normal",
+            "nombre": "jugador1",
+        }
     ]
     assert estado["arena"]["ancho"] == ANCHO_ARENA
 

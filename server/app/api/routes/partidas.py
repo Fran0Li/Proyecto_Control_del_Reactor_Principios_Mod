@@ -4,12 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
+from app.api.dependencias import UsuarioActual
 from app.db.session import get_session
 from app.models.partida import EstadoPartida
+from app.realtime.gestor_motores import gestor_motores
 from app.repositories import PartidaRepository, UsuarioRepository
 from app.services.partida_service import (
+    FaltanJugadoresError,
     JugadorYaEnPartidaError,
+    NoEsCreadorError,
     PartidaLlenaError,
     PartidaNoDisponibleError,
     PartidaNoEncontradaError,
@@ -99,3 +104,22 @@ def unirse_a_partida(partida_id: int, datos: UnirsePartidaRequest, db: SessionDe
         tiempo_limite_segundos=partida.tiempo_limite_segundos,
         puntuacion_objetivo=partida.puntuacion_objetivo,
     )
+
+
+@router.post("/{partida_id}/iniciar", response_model=PartidaResponse)
+async def iniciar_partida(partida_id: int, usuario: UsuarioActual, db: SessionDep):
+    """El creador arranca la partida: corre el reloj y los jugadores pasan a la arena (US-17)."""
+    servicio = PartidaService(PartidaRepository(db))
+    try:
+        # la base es sincrónica: en otro hilo para no frenar los motores que están corriendo
+        partida = await run_in_threadpool(servicio.iniciar_partida, partida_id, usuario.id)
+    except PartidaNoEncontradaError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    except NoEsCreadorError as error:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(error)) from error
+    except (PartidaNoDisponibleError, FaltanJugadoresError) as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+
+    motor = gestor_motores.obtener(partida_id)
+    motor.iniciar_partida(partida.tiempo_limite_segundos, partida.puntuacion_objetivo)
+    return partida

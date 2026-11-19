@@ -36,6 +36,15 @@ class PartidaRepository:
         self.db.refresh(partida)
         return partida
 
+    def guardar_resultado(self, partida: Partida, posiciones: dict[int, tuple[int, int]]) -> None:
+        """Cierra la partida. `posiciones`: jugador_id -> (puntaje final, posición final)."""
+        for participacion in self.listar_participaciones(partida.id):
+            if participacion.jugador_id in posiciones:
+                puntaje, posicion = posiciones[participacion.jugador_id]
+                participacion.puntaje_final = puntaje
+                participacion.posicion_final = posicion
+        self.cambiar_estado(partida, EstadoPartida.finalizada)
+
     def agregar_participante(self, partida_id: int, jugador_id: int) -> Participacion:
         participacion = Participacion(partida_id=partida_id, jugador_id=jugador_id)
         self.db.add(participacion)
@@ -46,6 +55,15 @@ class PartidaRepository:
     def listar_participaciones(self, partida_id: int) -> list[Participacion]:
         consulta = select(Participacion).where(Participacion.partida_id == partida_id)
         return list(self.db.scalars(consulta).all())
+
+    def creador(self, partida_id: int) -> int | None:
+        """El primero que entró a la partida es quien la creó (US-07)."""
+        consulta = (
+            select(Participacion.jugador_id)
+            .where(Participacion.partida_id == partida_id)
+            .order_by(Participacion.id)
+        )
+        return self.db.scalars(consulta).first()
 
     def contar_participantes(self, partida_id: int) -> int:
         consulta = (

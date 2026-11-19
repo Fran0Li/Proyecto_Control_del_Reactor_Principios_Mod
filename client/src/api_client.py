@@ -107,6 +107,11 @@ async def listar_partidas_disponibles() -> list[dict]:
 async def unirse_a_partida(partida_id: int, jugador_id: int) -> dict:
     return await _enviar("POST", f"/partidas/{partida_id}/unirse", {"jugador_id": jugador_id})
 
+
+async def iniciar_partida(partida_id: int, token: str) -> dict:
+    """Solo el creador puede iniciarla (US-17); el servidor avisa a todos por el canal."""
+    return await _enviar("POST", f"/partidas/{partida_id}/iniciar", token=token)
+
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""
     try:

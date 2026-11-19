@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 ESTADO_ACTUALIZADO = "estado_actualizado"
+PARTIDA_INICIADA = "partida_iniciada"  # datos: tiempo_limite, puntaje_objetivo, jugadores
 ACCION_REALIZADA = "accion_realizada"  # datos: jugador_id, accion, puntos
 JUGADOR_PENALIZADO = "jugador_penalizado"  # datos: jugador_id, guardian_id, puntos, estado
 
@@ -11,6 +12,9 @@ JUGADOR_PENALIZADO = "jugador_penalizado"  # datos: jugador_id, guardian_id, pun
 # (US-19).
 #   datos: puntajes  -> {jugador_id: puntaje final} de los jugadores que terminaron la partida
 #          ganador_id -> id del primer lugar, o None si hubo empate en el primer lugar
+#          posiciones -> [{jugador_id, nombre, puntaje, posicion}] de mayor a menor puntaje
+#          motivo     -> "tiempo", "puntaje" o "administrador"
+#          duracion_s -> segundos que duró la partida
 PARTIDA_FINALIZADA = "partida_finalizada"
 
 

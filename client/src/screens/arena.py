@@ -1,4 +1,7 @@
-"""Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía."""
+"""Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía.
+
+Cuando la partida termina (US-17) se pone encima un cuadro con las posiciones finales.
+"""
 
 import pygame
 
@@ -15,6 +18,11 @@ AMARILLO = (240, 190, 20)
 RADIO_CELDA = 10  # el servidor usa el mismo radio para saber cuándo se recoge una celda
 SUAVIZADO = 0.35  # cuánto se acerca al punto nuevo en cada cuadro (el servidor manda ~20 por s)
 CONTROLES = ("arriba", "abajo", "izquierda", "derecha", "accion")
+MOTIVOS = {
+    "tiempo": "Se acabó el tiempo",
+    "puntaje": "Alguien llegó al puntaje objetivo",
+    "administrador": "Un administrador cerró la partida",
+}
 
 
 class ArenaScreen:
@@ -27,6 +35,8 @@ class ArenaScreen:
         self.controles: ControlesJugador | None = None
         self.aviso_control = AvisoControl()
         self.visuales: dict[int, list[float]] = {}  # posición dibujada (suavizada)
+        self.fuente_titulo = pygame.font.Font(None, 56)
+        self.fuente = pygame.font.Font(None, 32)
 
     # ciclo de vida
 
@@ -119,3 +129,26 @@ class ArenaScreen:
         if self.controles is not None:
             self.controles.dibujar(screen)  # botones táctiles, solo en el navegador
         self.aviso_control.dibujar(screen)  # estado del control físico (US-26)
+        resultado = getattr(self.panel, "resultado", None)
+        if resultado is not None:
+            self._dibujar_resultado(screen, resultado)
+
+    def _dibujar_resultado(self, screen: pygame.Surface, resultado: dict) -> None:
+        velo = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
+        velo.fill((0, 0, 0, 170))
+        screen.blit(velo, (0, 0))
+        centro_x = self.ancho // 2
+        lineas = [
+            (self.fuente_titulo, "PARTIDA TERMINADA"),
+            (self.fuente, MOTIVOS.get(resultado.get("motivo"), "")),
+        ]
+        for jugador in resultado.get("posiciones", []):
+            nombre = jugador["nombre"] or f"Jugador {jugador['jugador_id']}"
+            fila = f"{jugador['posicion']}.  {nombre}  -  {jugador['puntaje']}"
+            lineas.append((self.fuente, fila))
+        lineas.append((self.fuente, "Esc para volver"))
+        y = self.alto // 2 - 30 * len(lineas)
+        for fuente, texto in lineas:
+            imagen = fuente.render(texto, True, BLANCO)
+            screen.blit(imagen, imagen.get_rect(center=(centro_x, y)))
+            y += 50 if fuente is self.fuente_titulo else 38

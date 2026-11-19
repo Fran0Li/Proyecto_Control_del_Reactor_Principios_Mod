@@ -2,7 +2,8 @@
 
 Abre en el login (US-03); desde ahí se crea una cuenta (US-01) o se entra al lobby. Del lobby
 se crea una partida (US-07) o se va a buscar una para unirse (US-08).
-Cuando el creador inicia la partida (US-17) todos pasan solos a la arena.
+Cuando el creador inicia la partida (US-17) todos pasan solos a la arena, y al terminar se ve la
+ceremonia con el podio (US-18).
 Abajo muestra si el backend responde.
 
 El ciclo principal es async (ADR 0002): así el mismo código corre en escritorio
@@ -13,10 +14,12 @@ import asyncio
 
 import pygame
 
+from src import sesion
 from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
 from src.screens.arena import ArenaScreen
 from src.screens.buscar_partida import BuscarPartidaScreen
+from src.screens.ceremonia import CeremoniaScreen
 from src.screens.lobby import LobbyScreen
 from src.screens.login import LoginScreen
 from src.screens.perfil import PerfilScreen
@@ -34,6 +37,7 @@ async def main() -> None:
     lobby = LobbyScreen(WINDOW_SIZE[0])
     buscar = BuscarPartidaScreen(WINDOW_SIZE[0])
     arena = ArenaScreen(*WINDOW_SIZE)
+    ceremonia = CeremoniaScreen(*WINDOW_SIZE)
     # cada pantalla pide cambiar poniendo su `siguiente_pantalla` con una de estas claves
     pantallas = {
         "login": LoginScreen(WINDOW_SIZE[0]),
@@ -44,6 +48,7 @@ async def main() -> None:
         "lobby": lobby,
         "buscar": buscar,
         "arena": arena,
+        "ceremonia": ceremonia,
     }
     pantalla = pantallas["login"]
 
@@ -55,6 +60,7 @@ async def main() -> None:
 
     tarea_estado = asyncio.create_task(comprobar_servidor())
 
+    dt = 0.0
     running = True
     while running:
         for event in pygame.event.get():
@@ -79,6 +85,10 @@ async def main() -> None:
             pantalla.siguiente_pantalla = None
             if destino == "verificar":  # el registro o el login le pasan el correo
                 pantallas["verificar"].preparar(pantalla.correo_pendiente)
+            elif destino == "ceremonia":  # la arena terminó: se usa el aviso de fin del canal
+                panel = arena.panel
+                ceremonia.preparar(panel.resultado, panel.partida_id, sesion.token())
+                panel.cerrar()  # la partida ya terminó
             pantalla = pantallas[destino]
             if hasattr(pantalla, "al_mostrar"):
                 pantalla.al_mostrar()
@@ -87,11 +97,13 @@ async def main() -> None:
         if pantalla is arena and arena.panel is not None:
             arena.panel.quiere_arena = False  # ya está en la arena: el aviso de inicio no aplica
         arena.update()
+        if pantalla is ceremonia:
+            ceremonia.update(dt)
         pantalla.draw(screen)
         info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))
         screen.blit(info, info.get_rect(center=(WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] - 40)))
         pygame.display.flip()
-        clock.tick(FPS)
+        dt = clock.tick(FPS) / 1000
         await asyncio.sleep(0)  # obligatorio en pygbag: le devuelve el control al navegador
     lobby.cerrar()
     buscar.cerrar()

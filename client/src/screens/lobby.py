@@ -35,6 +35,11 @@ class LobbyScreen:
         self.panel = PanelCanal()
         self._tarea: asyncio.Task | None = None
 
+    def al_mostrar(self) -> None:
+        """La llama el ciclo principal al volver al lobby (por ejemplo, después de la ceremonia)."""
+        if self.panel.canal is None:
+            self.mensaje = ""
+
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.boton_buscar.fue_presionado(event):
             self.siguiente_pantalla = "buscar"

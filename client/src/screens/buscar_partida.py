@@ -48,6 +48,10 @@ class BuscarPartidaScreen:
 
     def al_mostrar(self) -> None:
         """La llama el ciclo principal cada vez que se entra a esta pantalla."""
+        if self.unido_a is not None and self.panel.canal is None:
+            # la partida a la que se había unido ya terminó: se vuelve a buscar
+            self.unido_a = None
+            self.boton_volver.rect.x = self.centro_x + 15
         if not self.ocupada():
             self._tarea = asyncio.create_task(self._cargar())
 

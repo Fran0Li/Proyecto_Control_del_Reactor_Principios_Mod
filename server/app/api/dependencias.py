@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import TokenInvalidoError, leer_token_acceso
 from app.db.session import get_session
-from app.models.usuario import Usuario
+from app.models.usuario import ROL_ADMIN, Usuario
 from app.repositories import UsuarioRepository
 from app.services.correo import EnviadorCorreo, crear_enviador
 
@@ -33,6 +33,8 @@ def usuario_desde_token(db: Session, token: str) -> Usuario:
     # si cambió la contraseña, los tokens anteriores ya no sirven
     if usuario is None or usuario.version_sesion != version:
         raise TokenInvalidoError("La sesión no es válida o ya venció")
+    if usuario.bloqueado:
+        raise TokenInvalidoError("Tu cuenta fue bloqueada por un administrador")
     return usuario
 
 
@@ -50,3 +52,13 @@ def usuario_actual(
 
 
 UsuarioActual = Annotated[Usuario, Depends(usuario_actual)]
+
+
+def requiere_admin(usuario: UsuarioActual) -> Usuario:
+    """Solo deja pasar a un administrador (US-28); a un jugador le responde 403."""
+    if usuario.rol != ROL_ADMIN:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo un administrador puede hacer esto")
+    return usuario
+
+
+AdminActual = Annotated[Usuario, Depends(requiere_admin)]

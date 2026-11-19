@@ -173,6 +173,7 @@ Debe dar `'smtp.gmail.com' 587 '<cuenta>@gmail.com' largo: 16 espacios: False`.
 | Desplegar a mano | `cd ~/reactor && git pull && ./deploy/desplegar.sh` |
 | Volver a una versión | `git reset --hard <commit> && ./deploy/desplegar.sh` |
 | Entrar a la base | `docker compose -f docker-compose.prod.yml exec db psql -U reactor reactor` |
+| Crear el administrador (US-28) | `docker compose -f docker-compose.prod.yml exec server python -m app.scripts.crear_admin --usuario admin --correo <correo>` |
 
 - **No borrar** los volúmenes `pgdata` (datos) ni `caddy_data` (certificados; Let's Encrypt limita
   cuántos se pueden emitir por semana).

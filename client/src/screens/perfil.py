@@ -82,7 +82,7 @@ class PerfilScreen(PantallaFormulario):
             return
         self._mostrar_perfil(perfil)
         # el lobby muestra el nombre de la sesión, así que se actualiza
-        sesion.iniciar(actual.token, perfil)
+        sesion.iniciar(actual.token, {**perfil, "rol": actual.rol})
         self.mostrar("Cambios guardados")
 
     def _mostrar_perfil(self, perfil: dict) -> None:

@@ -17,6 +17,7 @@ import pygame
 from src import navegador, sesion
 from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
+from src.screens.admin import AdminScreen
 from src.screens.arena import ArenaScreen
 from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.ceremonia import CeremoniaScreen
@@ -49,6 +50,7 @@ async def main() -> None:
         "perfil": PerfilScreen(WINDOW_SIZE[0]),
         "ranking": RankingScreen(WINDOW_SIZE[0]),
         "historial": HistorialScreen(WINDOW_SIZE[0]),
+        "admin": AdminScreen(WINDOW_SIZE[0]),
         "lobby": lobby,
         "buscar": buscar,
         "arena": arena,

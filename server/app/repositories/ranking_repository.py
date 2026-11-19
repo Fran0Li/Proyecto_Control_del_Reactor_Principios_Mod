@@ -1,8 +1,13 @@
 from datetime import UTC, datetime
 
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.ranking import RankingGlobal
+from app.models.usuario import Usuario
+
+# más puntos primero; si empatan, más victorias
+ORDEN = (RankingGlobal.puntos_totales.desc(), RankingGlobal.victorias.desc())
 
 
 class RankingRepository:
@@ -20,3 +25,27 @@ class RankingRepository:
         fila.actualizado_en = datetime.now(UTC)
         self.db.commit()
         return fila
+
+    def top(self, limite: int) -> list[tuple[RankingGlobal, str]]:
+        """Los mejores jugadores con su nombre de usuario."""
+        consulta = (
+            select(RankingGlobal, Usuario.nombre_usuario)
+            .join(Usuario, Usuario.id == RankingGlobal.jugador_id)
+            .order_by(*ORDEN, RankingGlobal.jugador_id)
+            .limit(limite)
+        )
+        return [(fila, nombre) for fila, nombre in self.db.execute(consulta).all()]
+
+    def de_jugador(self, jugador_id: int) -> RankingGlobal | None:
+        return self.db.get(RankingGlobal, jugador_id)
+
+    def posicion(self, fila: RankingGlobal) -> int:
+        """Puesto del jugador: 1 + cuántos tienen más puntos (o iguales puntos y más victorias)."""
+        mejores = select(func.count()).where(
+            or_(
+                RankingGlobal.puntos_totales > fila.puntos_totales,
+                (RankingGlobal.puntos_totales == fila.puntos_totales)
+                & (RankingGlobal.victorias > fila.victorias),
+            )
+        )
+        return (self.db.scalar(mejores) or 0) + 1

@@ -44,10 +44,12 @@ async def terminar(pantalla):
 class PanelFalso:
     def __init__(self):
         self.abierto = None
+        self.es_creador = False
         self.cerrado = False
 
-    async def abrir(self, partida_id, token):
+    async def abrir(self, partida_id, token, es_creador=False):
         self.abierto = (partida_id, token)
+        self.es_creador = es_creador
 
     def update(self):
         pass
@@ -297,6 +299,7 @@ def test_lobby_crear_partida_muestra_el_resultado_y_abre_el_canal(monkeypatch):
     assert llamadas == [JUGADOR_ID]
     assert pantalla.mensaje == "Partida #5 creada - escenario: laboratorio"
     assert pantalla.panel.abierto == (5, sesion.token())
+    assert pantalla.panel.es_creador  # quien la crea es quien la puede iniciar
 
 
 def test_lobby_con_error_no_abre_el_canal(monkeypatch):

@@ -50,9 +50,9 @@ def cabecera(usuario):
 
 def partida_de(client, db_session, *nombres):
     usuarios = [crear_usuario(db_session, nombre) for nombre in nombres]
-    partida = client.post("/partidas", json={"creador_id": usuarios[0].id}).json()["id"]
+    partida = client.post("/partidas", headers=cabecera(usuarios[0])).json()["id"]
     for otro in usuarios[1:]:
-        client.post(f"/partidas/{partida}/unirse", json={"jugador_id": otro.id})
+        client.post(f"/partidas/{partida}/unirse", headers=cabecera(otro))
     return partida, usuarios
 
 
@@ -166,7 +166,7 @@ def test_iniciada_ya_no_aparece_ni_acepta_jugadores(client, db_session):
     iniciar(client, partida, ana)
 
     assert client.get("/partidas").json() == []
-    unirse = client.post(f"/partidas/{partida}/unirse", json={"jugador_id": caro.id})
+    unirse = client.post(f"/partidas/{partida}/unirse", headers=cabecera(caro))
     assert unirse.status_code == 409
 
 

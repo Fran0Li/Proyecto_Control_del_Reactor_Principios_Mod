@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.security import crear_token_acceso
 from app.db.session import Base, get_session
 from app.main import app as fastapi_app
 from app.models.partida import EstadoPartida
@@ -110,8 +111,12 @@ def api():
     engine.dispose()
 
 
+def con_token(jugador_id=1):
+    return {"Authorization": f"Bearer {crear_token_acceso(jugador_id)}"}
+
+
 def test_post_partidas_crea_la_partida(api):
-    respuesta = api.post("/partidas", json={"creador_id": 1})
+    respuesta = api.post("/partidas", headers=con_token())
 
     assert respuesta.status_code == 201
     cuerpo = respuesta.json()
@@ -121,28 +126,26 @@ def test_post_partidas_crea_la_partida(api):
 
 
 def test_post_partidas_con_escenario_indicado(api):
-    datos = {"creador_id": 1, "escenario": "laboratorio"}
-    respuesta = api.post("/partidas", json=datos)
+    respuesta = api.post("/partidas", json={"escenario": "laboratorio"}, headers=con_token())
 
     assert respuesta.status_code == 201
     assert respuesta.json()["escenario"] == "laboratorio"
 
 
-def test_post_partidas_jugador_inexistente_da_404(api):
-    respuesta = api.post("/partidas", json={"creador_id": 99})
-
-    assert respuesta.status_code == 404
+def test_post_partidas_sin_sesion_da_401(api):
+    assert api.post("/partidas").status_code == 401
+    assert api.post("/partidas", headers=con_token(99)).status_code == 401  # no existe
 
 
 def test_post_partidas_jugador_en_partida_activa_da_409(api):
-    api.post("/partidas", json={"creador_id": 1})
+    api.post("/partidas", headers=con_token())
 
-    respuesta = api.post("/partidas", json={"creador_id": 1})
+    respuesta = api.post("/partidas", headers=con_token())
 
     assert respuesta.status_code == 409
 
 
 def test_post_partidas_escenario_invalido_da_422(api):
-    respuesta = api.post("/partidas", json={"creador_id": 1, "escenario": "marte"})
+    respuesta = api.post("/partidas", json={"escenario": "marte"}, headers=con_token())
 
     assert respuesta.status_code == 422

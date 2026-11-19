@@ -1,15 +1,18 @@
 """Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía.
 
-Cuando la partida termina (US-17) se pone encima un cuadro con las posiciones finales.
+Encima van el reloj y la tabla de posiciones (US-24); cuando la partida termina (US-17) se pone
+un cuadro con las posiciones finales.
 """
 
 import pygame
 
+from src import sesion
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
 from src.screens.dibujo_guardianes import color_jugador, dibujar_guardianes
 from src.screens.dibujo_obstaculos import dibujar_obstaculos
+from src.screens.hud_partida import HudPartida
 from src.screens.panel_canal import PanelCanal
 
 BLANCO = (255, 255, 255)
@@ -37,6 +40,7 @@ class ArenaScreen:
         self.visuales: dict[int, list[float]] = {}  # posición dibujada (suavizada)
         self.fuente_titulo = pygame.font.Font(None, 56)
         self.fuente = pygame.font.Font(None, 32)
+        self.hud = HudPartida()  # reloj y tabla de posiciones (US-24)
 
     # ciclo de vida
 
@@ -126,6 +130,7 @@ class ArenaScreen:
                     (int(x), int(y)),
                     estado["arena"]["radio"],
                 )
+            self.hud.dibujar(screen, estado, sesion.jugador_id())
         if self.controles is not None:
             self.controles.dibujar(screen)  # botones táctiles, solo en el navegador
         self.aviso_control.dibujar(screen)  # estado del control físico (US-26)

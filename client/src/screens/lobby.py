@@ -62,7 +62,7 @@ class LobbyScreen:
             return
         self.mensaje = f"Partida #{partida['id']} creada - escenario: {partida['escenario']}"
         self.mensaje_es_error = False
-        await self.panel.abrir(partida["id"], sesion.token())
+        await self.panel.abrir(partida["id"], sesion.token(), es_creador=True)
 
     def update(self) -> None:
         self.panel.update()

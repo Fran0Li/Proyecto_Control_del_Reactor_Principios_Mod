@@ -2,6 +2,7 @@
 
 Abre en el login (US-03); desde ahí se crea una cuenta (US-01) o se entra al lobby. Del lobby
 se crea una partida (US-07) o se va a buscar una para unirse (US-08).
+Cuando el creador inicia la partida (US-17) todos pasan solos a la arena.
 Abajo muestra si el backend responde.
 
 El ciclo principal es async (ADR 0002): así el mismo código corre en escritorio
@@ -64,12 +65,12 @@ async def main() -> None:
                     status = "Servidor: comprobando..."
                     tarea_estado = asyncio.create_task(comprobar_servidor())
             pantalla.handle_event(event)
-            panel = getattr(pantalla, "panel", None)  # el panel tiene el botón de la arena
-            if panel is not None:
+            panel = getattr(pantalla, "panel", None)  # botones de la arena y de iniciar
+            if panel is not None and pantalla is not arena:
                 panel.handle_event(event)
 
         panel = getattr(pantalla, "panel", None)
-        if panel is not None and panel.quiere_arena:
+        if panel is not None and panel.quiere_arena and pantalla is not arena:
             panel.quiere_arena = False
             arena.preparar(panel, volver_a="lobby" if pantalla is lobby else "buscar")
             pantalla.siguiente_pantalla = "arena"
@@ -83,6 +84,8 @@ async def main() -> None:
                 pantalla.al_mostrar()
         lobby.update()
         buscar.update()
+        if pantalla is arena and arena.panel is not None:
+            arena.panel.quiere_arena = False  # ya está en la arena: el aviso de inicio no aplica
         arena.update()
         pantalla.draw(screen)
         info = text_font.render(f"{status}  (F5 para reintentar)", True, (200, 200, 200))

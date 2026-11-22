@@ -6,6 +6,7 @@ from app.db.session import SessionLocal
 from app.realtime.actualizador_ranking import ActualizadorRanking
 from app.realtime.cierre_partida import CierrePartida
 from app.realtime.connection_manager import ConnectionManager, manager
+from app.realtime.escenarios import crear_escenario
 from app.realtime.evaluador_logros import EvaluadorLogros, FabricaSesiones
 from app.realtime.eventos import PARTIDA_FINALIZADA, EventoPartida
 from app.realtime.motor_partida import EN_CURSO, FINALIZADA, MotorPartida
@@ -22,11 +23,18 @@ class GestorMotores:
         self._motores: dict[int, MotorPartida] = {}
         self._resultados_guardados: set[int] = set()  # partidas terminadas ya guardadas
 
-    def obtener(self, partida_id: int) -> MotorPartida:
-        """Devuelve el motor de la partida; si no existe, lo crea y lo pone en marcha."""
+    def obtener(self, partida_id: int, escenario: str | None = None) -> MotorPartida:
+        """Devuelve el motor de la partida; si no existe, lo crea y lo pone en marcha.
+        `escenario` solo se usa al crearlo (US-09); sin escenario queda la arena básica."""
         motor = self._motores.get(partida_id)
         if motor is None:
-            motor = MotorPartida(partida_id)
+            if escenario is None:
+                motor = MotorPartida(partida_id)
+            else:
+                arena, guardianes = crear_escenario(escenario)
+                motor = MotorPartida(
+                    partida_id, arena=arena, guardianes=guardianes, escenario=escenario
+                )
             # Los interesados en la partida se suscriben aquí; el motor no los conoce (ADR 0006)
             motor.suscribir(NotificadorWebSocket(self._canales))
             motor.suscribir(EvaluadorLogros(self._fabrica_sesiones))  # US-27

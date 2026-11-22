@@ -57,6 +57,7 @@ class JugadorEnArena:
     puntaje: int = 0
     estado: EstadoJugador = field(default_factory=Normal)
     nombre: str = ""
+    numero: int = 0  # 1 a 4, el orden de llegada: su esquina de inicio y su color
     conectado: bool = True
 
 
@@ -67,8 +68,10 @@ class MotorPartida:
         arena: Arena | None = None,
         acciones: list[AccionContextual] | None = None,
         guardianes: list[Guardian] | None = None,
+        escenario: str | None = None,
     ) -> None:
         self.partida_id = partida_id
+        self.escenario = escenario  # el cliente lo usa para elegir el fondo y los dibujos
         self.arena = arena if arena is not None else arena_basica()
         # Lo que hace el botón de acción, en orden de prioridad (ver acciones.py)
         self._acciones: list[AccionContextual] = (
@@ -131,8 +134,9 @@ class MotorPartida:
         else:
             puntos = self.arena.puntos_inicio
             x, y = puntos[len(self._jugadores) % len(puntos)]
+            numero = len(self._jugadores) % len(puntos) + 1
             self._jugadores[jugador_id] = JugadorEnArena(
-                jugador_id, float(x), float(y), nombre=nombre
+                jugador_id, float(x), float(y), nombre=nombre, numero=numero
             )
         self._hay_cambios = True
 
@@ -267,7 +271,10 @@ class MotorPartida:
             jugador.presionados.discard(control)
 
     def _accionar(self, jugador: JugadorEnArena) -> None:
-        """Hace la primera acción del contexto que aplique donde está el jugador."""
+        """Hace la primera acción del contexto que aplique donde está el jugador.
+        Un jugador aturdido no puede actuar (CU-11): se ignora el botón."""
+        if not jugador.estado.puede_moverse:
+            return
         for accion in self._acciones:
             resultado = accion.intentar(jugador, self.tiempo)
             if resultado is None:
@@ -357,7 +364,9 @@ class MotorPartida:
         arena["celdas"] = [c.a_dict() for c in self._celdas.disponibles()]
         # Las puertas dicen si están abiertas o cerradas
         arena["obstaculos"] = self._obstaculos.a_dicts()
+        datos_escenario = {"escenario": self.escenario} if self.escenario else {}
         return {
+            **datos_escenario,
             "jugadores": [
                 {
                     "jugador_id": j.jugador_id,
@@ -366,6 +375,7 @@ class MotorPartida:
                     "puntaje": j.puntaje,
                     "estado": j.estado.nombre,
                     "nombre": j.nombre,
+                    "numero": j.numero,
                 }
                 for j in sorted(self._jugadores.values(), key=lambda j: j.jugador_id)
             ],

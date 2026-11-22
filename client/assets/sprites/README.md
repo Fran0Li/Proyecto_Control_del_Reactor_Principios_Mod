@@ -1,0 +1,10 @@
+# Sprites del juego
+
+Pixel art de 30 x 30 (estilo futurista). Los carga `src/sprites.py`; si falta una imagen, el
+juego dibuja la figura de antes (círculo o rectángulo).
+
+| Archivo | Se usa para |
+| --- | --- |
+| `jugador_1.png` a `jugador_4.png` | El personaje de cada jugador según su número (1 a 4). En la arena se dibuja a 32 x 32 dentro del aro de su color |
+| `muro.png` | Relleno de las barreras fijas y móviles, en cuadros de 30 x 30 (los obstáculos de los escenarios miden múltiplos de 30) |
+| `extra/` | Disponibles para lo que falta (guardianes, reactor, terminales): base, torres, tanque y unidad rápida |

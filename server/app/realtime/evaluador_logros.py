@@ -6,7 +6,13 @@ from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
-from app.realtime.eventos import ACCION_REALIZADA, PARTIDA_FINALIZADA, EventoPartida
+from app.realtime.eventos import (
+    ACCION_REALIZADA,
+    JUGADOR_PENALIZADO,
+    PARTIDA_FINALIZADA,
+    PARTIDA_INICIADA,
+    EventoPartida,
+)
 from app.realtime.logros import EstadisticasJugador, nuevos_logros
 from app.realtime.reactor import ExtraccionReactor
 from app.repositories.logro_repository import LogroRepository
@@ -21,6 +27,10 @@ class EvaluadorLogros:
 
     Es un Subscriber del motor (Observer, ADR 0006): el motor no sabe que los logros existen, y
     agregarlos no lo modificó. Hay uno por partida, así sus estadísticas se van con el motor.
+
+    Antes de iniciar la partida los jugadores pueden moverse y extraer energía para probar el
+    control (US-17), pero eso no cuenta: al llegar `partida_iniciada` se borran las estadísticas,
+    igual que el motor pone los puntajes en cero.
     """
 
     def __init__(self, fabrica_sesiones: FabricaSesiones) -> None:
@@ -34,8 +44,12 @@ class EvaluadorLogros:
         return self._estadisticas[jugador_id]
 
     async def al_evento(self, evento: EventoPartida) -> None:
-        if evento.tipo == ACCION_REALIZADA:
+        if evento.tipo == PARTIDA_INICIADA:
+            self._estadisticas.clear()  # lo de antes de iniciar era práctica
+        elif evento.tipo == ACCION_REALIZADA:
             self._registrar_accion(evento.datos)
+        elif evento.tipo == JUGADOR_PENALIZADO:
+            self.estadisticas(int(evento.datos["jugador_id"])).penalizaciones += 1
         elif evento.tipo == PARTIDA_FINALIZADA and not self._evaluada:
             self._evaluada = True  # una partida se evalúa una sola vez
             # La base es sincrónica: se escribe en otro hilo para no frenar el ciclo de eventos

@@ -20,7 +20,7 @@ from app.realtime.arena import (
     Reactor,
 )
 from app.realtime.guardianes import Guardian, Patrulla, Perseguir, RutaFija
-from app.realtime.obstaculos import BARRERA, PUERTA, TRAMPA
+from app.realtime.obstaculos import BARRERA, BARRERA_MOVIL, PUERTA, TRAMPA
 
 VALOR_CELDA = 10  # CU-10 del ERS: una celda da 10 puntos
 
@@ -34,6 +34,9 @@ class Escenario:
     celdas: tuple[tuple[int, int, int], ...]
     # Cada llamada devuelve guardianes nuevos: tienen estado y no se comparten entre partidas
     guardianes: Callable[[], list[Guardian]]
+    # (x, y, ancho, alto, destino_x, destino_y) del cuadrante de arriba a la izquierda: barreras
+    # que van y vienen en línea recta entre (x, y) y (destino_x, destino_y)
+    moviles: tuple[tuple[int, int, int, int, int, int], ...] = ()
 
 
 def _reflejar_obstaculo(x: int, y: int, ancho: int, alto: int, tipo: str) -> list[Obstaculo]:
@@ -46,6 +49,21 @@ def _reflejar_obstaculo(x: int, y: int, ancho: int, alto: int, tipo: str) -> lis
         Obstaculo(x, espejo_y, ancho, alto, tipo),
         Obstaculo(espejo_x, espejo_y, ancho, alto, tipo),
     ]
+
+
+def _reflejar_movil(
+    x: int, y: int, ancho: int, alto: int, destino_x: int, destino_y: int
+) -> list[Obstaculo]:
+    """La misma barrera móvil en los cuatro cuadrantes, con el recorrido también reflejado."""
+    resultado = []
+    for reflejar_x in (False, True):
+        for reflejar_y in (False, True):
+            ox = ANCHO_ARENA - x - ancho if reflejar_x else x
+            oy = ALTO_ARENA - y - alto if reflejar_y else y
+            dx = ANCHO_ARENA - destino_x - ancho if reflejar_x else destino_x
+            dy = ALTO_ARENA - destino_y - alto if reflejar_y else destino_y
+            resultado.append(Obstaculo(ox, oy, ancho, alto, BARRERA_MOVIL, dx, dy))
+    return resultado
 
 
 def _reflejar_celda(x: int, y: int) -> list[tuple[int, int]]:
@@ -103,6 +121,7 @@ ESCENARIOS: dict[str, Escenario] = {
         ),
         celdas=((240, 45, VALOR_CELDA), (420, 110, VALOR_CELDA)),
         guardianes=_guardianes_laboratorio,
+        moviles=((180, 180, 30, 60, 270, 180),),
     ),
     "estacion_espacial": Escenario(
         nombre="estacion_espacial",
@@ -133,6 +152,7 @@ ESCENARIOS: dict[str, Escenario] = {
         ),
         celdas=((240, 30, VALOR_CELDA), (420, 180, VALOR_CELDA)),
         guardianes=_guardianes_centro,
+        moviles=((150, 210, 90, 30, 240, 210),),
     ),
     "complejo_militar": Escenario(
         nombre="complejo_militar",
@@ -161,6 +181,7 @@ def crear_escenario(nombre: str) -> tuple[Arena, list[Guardian]]:
     if escenario is None:
         raise EscenarioDesconocidoError(f"Escenario no válido: {nombre}")
     obstaculos = [o for datos in escenario.obstaculos for o in _reflejar_obstaculo(*datos)]
+    obstaculos += [o for datos in escenario.moviles for o in _reflejar_movil(*datos)]
     celdas = []
     for x, y, valor in escenario.celdas:
         for cx, cy in _reflejar_celda(x, y):

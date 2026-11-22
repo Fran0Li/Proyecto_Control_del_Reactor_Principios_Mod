@@ -1,4 +1,5 @@
-"""Pruebas de los obstáculos (US-14): barrera, trampa y puerta. Sin red ni base de datos."""
+"""Pruebas de los obstáculos (US-14): barrera, trampa, puerta y barrera móvil. Sin red ni base
+de datos."""
 
 import asyncio
 
@@ -8,10 +9,13 @@ from app.realtime.arena import Arena, Obstaculo, Reactor
 from app.realtime.eventos import ESTADO_ACTUALIZADO
 from app.realtime.motor_partida import CICLO_S, VELOCIDAD, MotorPartida
 from app.realtime.obstaculos import (
+    BARRERA_MOVIL,
     FACTOR_TRAMPA,
     PUERTA_ABIERTA_S,
     PUERTA_CERRADA_S,
+    VELOCIDAD_BARRERA_MOVIL,
     GestorObstaculos,
+    posicion_en,
     toca,
 )
 
@@ -199,3 +203,85 @@ class TestSinObstaculos:
         avanzar(motor, 10)
         assert posicion(motor)[0] == pytest.approx(240 + VELOCIDAD * 10 * CICLO_S, abs=1)
         assert motor.estado()["arena"]["obstaculos"] == []
+
+
+def barrera_movil(x=100, y=0, destino_x=200, destino_y=0, ancho=20, alto=60):
+    return Obstaculo(x, y, ancho, alto, BARRERA_MOVIL, destino_x, destino_y)
+
+
+class TestBarreraMovil:
+    def test_empieza_en_su_punto_inicial(self):
+        movil = barrera_movil()
+        assert posicion_en(movil, 0, 30) == movil
+
+    def test_avanza_hacia_el_destino_a_su_velocidad(self):
+        movil = posicion_en(barrera_movil(), 2.0, 30)  # 2 s a 30 px/s: 60 px
+        assert (movil.x, movil.y) == pytest.approx((160, 0))
+
+    def test_en_el_destino_da_la_vuelta(self):
+        tiempo_de_ida = 100 / 30
+        en_destino = posicion_en(barrera_movil(), tiempo_de_ida, 30)
+        assert (en_destino.x, en_destino.y) == pytest.approx((200, 0))
+        de_vuelta = posicion_en(barrera_movil(), tiempo_de_ida + 1.0, 30)
+        assert (de_vuelta.x, de_vuelta.y) == pytest.approx((170, 0))
+
+    def test_completa_el_ciclo_y_vuelve_al_inicio(self):
+        ciclo = 2 * 100 / 30
+        movil = posicion_en(barrera_movil(), ciclo, 30)
+        assert (movil.x, movil.y) == pytest.approx((100, 0))
+
+    def test_nunca_sale_del_recorrido(self):
+        for decima in range(0, 1000):
+            movil = posicion_en(barrera_movil(), decima / 10, 30)
+            assert 100 - 1e-6 <= movil.x <= 200 + 1e-6
+
+    def test_puede_moverse_en_diagonal(self):
+        movil = posicion_en(barrera_movil(0, 0, 30, 40), 1.0, 25)  # recorrido de 50 px
+        assert (movil.x, movil.y) == pytest.approx((15, 20))
+
+    def test_sin_destino_o_sin_recorrido_se_queda_quieta(self):
+        sin_destino = Obstaculo(10, 10, 20, 20, BARRERA_MOVIL)
+        sin_recorrido = barrera_movil(10, 10, 10, 10)
+        assert posicion_en(sin_destino, 5, 30) == sin_destino
+        assert posicion_en(sin_recorrido, 5, 30) == sin_recorrido
+
+    def test_los_otros_obstaculos_no_se_mueven(self):
+        for tipo in ("barrera", "trampa", "puerta"):
+            fijo = Obstaculo(10, 10, 20, 20, tipo, 100, 100)
+            assert posicion_en(fijo, 5, 30) == fijo
+
+    def test_bloquea_el_paso_donde_esta_ahora(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        assert gestor.mover(60, 100, 90, 100) == (60, 100)  # la barrera está en x = 100..120
+        gestor.actualizar(100 / VELOCIDAD_BARRERA_MOVIL)  # llega a x = 200..220
+        assert gestor.mover(60, 100, 90, 100) == (90, 100)  # ya no está en el camino
+        assert gestor.mover(160, 100, 190, 100) == (160, 100)  # ahora bloquea más adelante
+
+    def test_actualizar_avisa_que_hubo_cambio_en_cada_ciclo(self):
+        gestor = GestorObstaculos([barrera_movil()], RADIO)
+        assert gestor.actualizar(CICLO_S) is True
+        assert gestor.actualizar(CICLO_S) is True
+
+    def test_el_estado_trae_la_posicion_actual(self):
+        gestor = GestorObstaculos([barrera_movil()], RADIO)
+        gestor.actualizar(2.0)
+        dato = gestor.a_dicts()[0]
+        assert dato["tipo"] == BARRERA_MOVIL
+        assert dato["x"] == 160
+
+    def test_el_motor_la_mueve_y_avisa_a_los_clientes(self):
+        motor = motor_con([barrera_movil(100, 0, 200, 0, alto=200)])
+        observador = ObservadorFalso()
+        motor.suscribir(observador)
+        inicio = motor.estado()["arena"]["obstaculos"][0]["x"]
+        avanzar(motor, ticks_para(1.0))
+        estados = [e.datos for e in observador.eventos if e.tipo == ESTADO_ACTUALIZADO]
+        assert estados
+        assert estados[-1]["arena"]["obstaculos"][0]["x"] > inicio
+
+    def test_el_jugador_choca_con_ella_en_el_motor(self):
+        # Barrera quieta frente al jugador (50, 100): no lo deja pasar
+        motor = motor_con([barrera_movil(100, 0, 100, 1, alto=200)])
+        motor.aplicar_entrada(1, "derecha", "presionado")
+        avanzar(motor, ticks_para(2.0))
+        assert posicion(motor)[0] < 100 - RADIO + 1

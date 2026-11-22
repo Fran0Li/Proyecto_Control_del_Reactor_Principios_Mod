@@ -26,13 +26,18 @@ class Reactor:
 
 @dataclass(frozen=True)
 class Obstaculo:
-    """Un rectángulo del mapa. `tipo` dice qué hace: barrera, trampa, puerta..."""
+    """Un rectángulo del mapa. `tipo` dice qué hace: barrera, trampa, puerta...
+
+    Una barrera móvil lleva además `destino_x` y `destino_y`: la esquina de arriba a la izquierda
+    del otro extremo del recorrido. Va y viene en línea recta entre (x, y) y ese punto."""
 
     x: float
     y: float
     ancho: float
     alto: float
     tipo: str = "barrera"
+    destino_x: float | None = None
+    destino_y: float | None = None
 
     def a_dict(self) -> dict:
         return {

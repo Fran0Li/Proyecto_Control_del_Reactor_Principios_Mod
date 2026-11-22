@@ -1,4 +1,4 @@
-"""Pantalla de la arena (versión mínima): un círculo rojo por jugador y las celdas de energía.
+"""Pantalla de la arena (versión mínima): un círculo rojo por jugador, el reactor y las celdas.
 
 Encima van el reloj y la tabla de posiciones (US-24). Cuando la partida termina (US-17) se pone
 un cuadro con las posiciones finales y a los pocos segundos se pasa a la ceremonia (US-18).
@@ -15,6 +15,7 @@ from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
 from src.screens.dibujo_guardianes import color_jugador, dibujar_guardianes
 from src.screens.dibujo_obstaculos import dibujar_obstaculos
+from src.screens.dibujo_reactor import dibujar_reactor
 from src.screens.hud_partida import HudPartida
 from src.screens.panel_canal import PanelCanal
 
@@ -86,7 +87,7 @@ class ArenaScreen:
                 {"tipo": "entrada", "control": control, "estado": "liberado", "origen": "teclado"}
             )
 
-    # eventos y actualización 
+    # eventos y actualización
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -132,7 +133,7 @@ class ArenaScreen:
             if jugador_id not in presentes:
                 del self.visuales[jugador_id]
 
-    # dibujo 
+    # dibujo
 
     def draw(self, screen: pygame.Surface) -> None:
         screen.fill(BLANCO)
@@ -140,6 +141,16 @@ class ArenaScreen:
         if estado is not None:
             # la arena del servidor mide 960 x 540 y la ventana tiene 960 de ancho: se dibuja 1 a 1
             dibujar_obstaculos(screen, estado["arena"].get("obstaculos", []))
+            reactor = estado["arena"].get("reactor")
+            if reactor is not None:
+                energia = estado.get("reactor", {})
+                dibujar_reactor(
+                    screen,
+                    reactor,
+                    energia.get("energia"),
+                    energia.get("capacidad"),
+                    self._reloj(),
+                )
             for celda in estado["arena"].get("celdas", []):
                 pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
             dibujar_guardianes(screen, estado.get("guardianes", []))

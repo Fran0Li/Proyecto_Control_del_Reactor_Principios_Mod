@@ -11,6 +11,7 @@ from app.realtime.eventos import PARTIDA_FINALIZADA, EventoPartida
 from app.realtime.motor_partida import EN_CURSO, FINALIZADA, MotorPartida
 from app.realtime.notificador_websocket import NotificadorWebSocket
 from app.realtime.registro_eventos import RegistroEventos
+from app.realtime.retos import GestorRetos
 
 
 class GestorMotores:
@@ -30,6 +31,7 @@ class GestorMotores:
             # Los interesados en la partida se suscriben aquí; el motor no los conoce (ADR 0006)
             motor.suscribir(NotificadorWebSocket(self._canales))
             motor.suscribir(EvaluadorLogros(self._fabrica_sesiones))  # US-27
+            motor.suscribir(GestorRetos(motor))  # US-27: retos con puntos extra en la partida
             # US-17: guardar el resultado, los eventos y el ranking al terminar
             motor.suscribir(CierrePartida(self._fabrica_sesiones))
             motor.suscribir(RegistroEventos(self._fabrica_sesiones))

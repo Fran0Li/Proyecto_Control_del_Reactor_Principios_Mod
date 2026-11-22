@@ -6,6 +6,7 @@ ESTADO_ACTUALIZADO = "estado_actualizado"
 PARTIDA_INICIADA = "partida_iniciada"  # datos: tiempo_limite, puntaje_objetivo, jugadores
 ACCION_REALIZADA = "accion_realizada"  # datos: jugador_id, accion, puntos
 JUGADOR_PENALIZADO = "jugador_penalizado"  # datos: jugador_id, guardian_id, puntos, estado
+RETO_COMPLETADO = "reto_completado"  # US-27, datos: jugador_id, reto, nombre, puntos
 
 # Contrato del fin de partida (US-17). Lo emite el motor una sola vez, cuando la partida termina
 # por tiempo o por puntaje objetivo. Lo escuchan los logros (US-27) y lo puede escuchar el ranking

@@ -101,6 +101,11 @@ class MotorPartida:
     def desuscribir(self, observador: ObservadorPartida) -> None:
         self._observadores.remove(observador)
 
+    def publicar(self, tipo: str, datos: dict) -> None:
+        """Deja un evento para avisarlo en el próximo tick. Lo usan los observadores que también
+        producen eventos, como los retos (US-27), sin que el motor los conozca."""
+        self._eventos_pendientes.append(EventoPartida(tipo, self.partida_id, datos))
+
     async def _notificar(self, evento: EventoPartida) -> None:
         for observador in list(self._observadores):
             try:

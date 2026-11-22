@@ -68,7 +68,7 @@ def tecla(tipo, clave):
     return pygame.event.Event(tipo, key=clave)
 
 
-# dibujo 
+# dibujo
 
 
 def test_el_fondo_es_blanco():
@@ -81,14 +81,15 @@ def test_el_fondo_es_blanco():
     assert tuple(pantalla.get_at((480, 300)))[:3] == BLANCO
 
 
-def test_dibuja_un_circulo_rojo_por_jugador_en_su_posicion():
+def test_dibuja_a_cada_jugador_en_su_posicion():
     arena = arena_con(PanelFalso([(1, 240, 135), (2, 720, 135)]))
     arena.update()
 
     pantalla = dibujar(arena)
 
-    assert tuple(pantalla.get_at((240, 135)))[:3] == ROJO
-    assert tuple(pantalla.get_at((720, 135)))[:3] == ROJO
+    # en el centro va el personaje (sprite) y alrededor el aro de color
+    assert tuple(pantalla.get_at((240, 135)))[:3] != BLANCO
+    assert tuple(pantalla.get_at((720, 135)))[:3] != BLANCO
 
 
 def test_el_circulo_tiene_el_radio_que_manda_el_servidor():
@@ -227,7 +228,7 @@ def test_sin_canal_escape_tambien_funciona():
     assert arena.siguiente_pantalla == "lobby"
 
 
-# panel del canal: estado y botón de la arena 
+# panel del canal: estado y botón de la arena
 
 
 class CanalDelPanel:

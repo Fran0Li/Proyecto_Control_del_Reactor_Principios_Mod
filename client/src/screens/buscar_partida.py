@@ -44,7 +44,7 @@ class BuscarPartidaScreen:
         self.panel = PanelCanal()
         self._tarea: asyncio.Task | None = None
 
-    # ciclo de vida 
+    # ciclo de vida
 
     def al_mostrar(self) -> None:
         """La llama el ciclo principal cada vez que se entra a esta pantalla."""

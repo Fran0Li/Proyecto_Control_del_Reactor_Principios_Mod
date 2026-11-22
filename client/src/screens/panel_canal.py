@@ -74,7 +74,7 @@ class PanelCanal:
     # estado de la partida
 
     def estado_partida(self) -> str:
-        """"esperando", "en_curso" o "finalizada", según el último estado del servidor."""
+        """ "esperando", "en_curso" o "finalizada", según el último estado del servidor."""
         if self.estado is None:
             return "esperando"
         return self.estado.get("partida", {}).get("estado", "esperando")
@@ -99,8 +99,8 @@ class PanelCanal:
             return
         if self.boton_arena.fue_presionado(event):
             self.quiere_arena = True
-        elif self.puede_iniciar() and not self.ocupado() and self.boton_iniciar.fue_presionado(
-            event
+        elif (
+            self.puede_iniciar() and not self.ocupado() and self.boton_iniciar.fue_presionado(event)
         ):
             self._tarea = asyncio.create_task(self._iniciar())
 

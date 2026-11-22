@@ -1,4 +1,4 @@
-"""Pantalla de la arena (versión mínima): un círculo rojo por jugador, el reactor y las celdas.
+"""Pantalla de la arena: los jugadores (sprite por número), el reactor, las celdas y obstáculos.
 
 Encima van el reloj y la tabla de posiciones (US-24). Cuando la partida termina (US-17) se pone
 un cuadro con las posiciones finales y a los pocos segundos se pasa a la ceremonia (US-18).
@@ -13,7 +13,8 @@ from src import sesion
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
-from src.screens.dibujo_guardianes import color_jugador, dibujar_guardianes
+from src.screens.dibujo_guardianes import dibujar_guardianes
+from src.screens.dibujo_jugadores import dibujar_jugador
 from src.screens.dibujo_obstaculos import dibujar_obstaculos
 from src.screens.dibujo_reactor import dibujar_reactor
 from src.screens.hud_partida import HudPartida
@@ -34,9 +35,7 @@ MOTIVOS = {
 
 
 class ArenaScreen:
-    def __init__(
-        self, ancho: int, alto: int, reloj: Callable[[], float] = time.monotonic
-    ) -> None:
+    def __init__(self, ancho: int, alto: int, reloj: Callable[[], float] = time.monotonic) -> None:
         self.ancho, self.alto = ancho, alto
         self._reloj = reloj
         self._terminada_en: float | None = None  # cuándo llegó el fin de la partida
@@ -49,6 +48,7 @@ class ArenaScreen:
         self.visuales: dict[int, list[float]] = {}  # posición dibujada (suavizada)
         self.fuente_titulo = pygame.font.Font(None, 56)
         self.fuente = pygame.font.Font(None, 32)
+        self.fuente_etiqueta = pygame.font.Font(None, 20)  # "J1" o "Vos" sobre cada jugador
         self.hud = HudPartida()  # reloj y tabla de posiciones (US-24)
 
     # ciclo de vida
@@ -154,13 +154,18 @@ class ArenaScreen:
             for celda in estado["arena"].get("celdas", []):
                 pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
             dibujar_guardianes(screen, estado.get("guardianes", []))
+            propio = sesion.jugador_id()
             for jugador in estado["jugadores"]:
                 x, y = self.visuales.get(jugador["jugador_id"], [jugador["x"], jugador["y"]])
-                pygame.draw.circle(
+                dibujar_jugador(
                     screen,
-                    color_jugador(jugador.get("estado")),
-                    (int(x), int(y)),
+                    x,
+                    y,
                     estado["arena"]["radio"],
+                    numero=jugador.get("numero"),
+                    estado=jugador.get("estado"),
+                    propio=jugador["jugador_id"] == propio,
+                    fuente=self.fuente_etiqueta,
                 )
             self.hud.dibujar(screen, estado, sesion.jugador_id())
         if self.controles is not None:

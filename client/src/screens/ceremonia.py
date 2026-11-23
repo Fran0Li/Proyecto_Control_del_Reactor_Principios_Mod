@@ -73,8 +73,13 @@ class Confeti:
     def _nuevo(self, arriba: bool = True) -> list:
         y = random.uniform(-40, 0) if arriba else random.uniform(-self.alto, self.alto)
         # x, y, velocidad, fase del vaivén, color
-        return [random.uniform(0, self.ancho), y, random.uniform(60, 140),
-                random.uniform(0, math.tau), random.choice(COLORES_CONFETI)]
+        return [
+            random.uniform(0, self.ancho),
+            y,
+            random.uniform(60, 140),
+            random.uniform(0, math.tau),
+            random.choice(COLORES_CONFETI),
+        ]
 
     def actualizar(self, dt: float) -> None:
         for i, papel in enumerate(self.papeles):
@@ -196,16 +201,18 @@ class CeremoniaScreen:
         if alto_visible > 30:
             self._texto(screen, self.fuente_titulo, str(puesto), COLOR_FONDO, rect.y + 32, centro)
         self._texto(screen, self.fuente, jugador["nombre"], COLOR_TEXTO, rect.y - 40, centro)
-        self._texto(screen, self.fuente_chica, f"{jugador['puntaje']} pts", COLOR_SUAVE,
-                    rect.y - 18, centro)
+        self._texto(
+            screen, self.fuente_chica, f"{jugador['puntaje']} pts", COLOR_SUAVE, rect.y - 18, centro
+        )
         if puesto == 1:
             self._trofeo(screen, centro, rect.y - 95)
 
     def _trofeo(self, screen: pygame.Surface, x: int, y: int) -> None:
         brillo = 20 * math.sin(self.tiempo * 4)  # titila un poco
         oro = (235, int(190 + brillo), 50)
-        pygame.draw.polygon(screen, oro, [(x - 22, y - 20), (x + 22, y - 20), (x + 12, y + 12),
-                                          (x - 12, y + 12)])  # copa
+        pygame.draw.polygon(
+            screen, oro, [(x - 22, y - 20), (x + 22, y - 20), (x + 12, y + 12), (x - 12, y + 12)]
+        )  # copa
         pygame.draw.circle(screen, oro, (x - 22, y - 8), 9, 3)  # asas
         pygame.draw.circle(screen, oro, (x + 22, y - 8), 9, 3)
         pygame.draw.rect(screen, oro, (x - 4, y + 12, 8, 12))  # pie

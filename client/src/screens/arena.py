@@ -1,4 +1,4 @@
-"""Pantalla de la arena (versión mínima): un círculo rojo por jugador, el reactor y las celdas.
+"""Pantalla de la arena: los jugadores (sprite por número), el reactor, las celdas y obstáculos.
 
 Encima van el reloj y la tabla de posiciones (US-24). Cuando la partida termina (US-17) se pone
 un cuadro con las posiciones finales y a los pocos segundos se pasa a la ceremonia (US-18).
@@ -13,11 +13,13 @@ from src import sesion
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
-from src.screens.dibujo_guardianes import color_jugador, dibujar_guardianes
+from src.screens.dibujo_guardianes import dibujar_guardianes
+from src.screens.dibujo_jugadores import dibujar_jugador
 from src.screens.dibujo_obstaculos import dibujar_obstaculos
 from src.screens.dibujo_reactor import dibujar_reactor
 from src.screens.hud_partida import HudPartida
 from src.screens.panel_canal import PanelCanal
+from src.screens.particulas import SistemaParticulas
 
 BLANCO = (255, 255, 255)
 ROJO = (220, 30, 30)
@@ -34,9 +36,7 @@ MOTIVOS = {
 
 
 class ArenaScreen:
-    def __init__(
-        self, ancho: int, alto: int, reloj: Callable[[], float] = time.monotonic
-    ) -> None:
+    def __init__(self, ancho: int, alto: int, reloj: Callable[[], float] = time.monotonic) -> None:
         self.ancho, self.alto = ancho, alto
         self._reloj = reloj
         self._terminada_en: float | None = None  # cuándo llegó el fin de la partida
@@ -49,7 +49,11 @@ class ArenaScreen:
         self.visuales: dict[int, list[float]] = {}  # posición dibujada (suavizada)
         self.fuente_titulo = pygame.font.Font(None, 56)
         self.fuente = pygame.font.Font(None, 32)
+        self.fuente_etiqueta = pygame.font.Font(None, 20)  # "J1" o "Vos" sobre cada jugador
         self.hud = HudPartida()  # reloj y tabla de posiciones (US-24)
+        self.particulas = SistemaParticulas()  # chispas cuando un guardián alcanza a alguien
+        self._estados_previos: dict[int, str | None] = {}
+        self._ultimo_cuadro: float | None = None
 
     # ciclo de vida
 
@@ -72,6 +76,9 @@ class ArenaScreen:
             self.controles = None
         self.activa = False
         self.visuales = {}
+        self.particulas.vaciar()
+        self._estados_previos = {}
+        self._ultimo_cuadro = None
 
     def _salir(self) -> None:
         self._soltar_todo()
@@ -104,7 +111,23 @@ class ArenaScreen:
             self.aviso_control.observar(control.estado if control is not None else None)
         if self.panel.estado is not None:
             self._acercar(self.panel.estado["jugadores"])
+            self._detectar_golpes(self.panel.estado["jugadores"])
+        ahora = self._reloj()
+        if self._ultimo_cuadro is not None:
+            self.particulas.actualizar(min(ahora - self._ultimo_cuadro, 0.1))
+        self._ultimo_cuadro = ahora
         self._revisar_fin()
+
+    def _detectar_golpes(self, jugadores: list[dict]) -> None:
+        """Si un jugador pasa a "aturdido", un guardián lo acaba de alcanzar (US-15): chispas."""
+        for jugador in jugadores:
+            jugador_id = jugador["jugador_id"]
+            antes = self._estados_previos.get(jugador_id, "sin_ver")
+            ahora = jugador.get("estado")
+            if ahora == "aturdido" and antes not in ("aturdido", "sin_ver"):
+                x, y = self.visuales.get(jugador_id, [jugador["x"], jugador["y"]])
+                self.particulas.impacto(x, y)
+            self._estados_previos[jugador_id] = ahora
 
     def _revisar_fin(self) -> None:
         """Unos segundos después del fin de la partida se pasa a la ceremonia."""
@@ -154,14 +177,20 @@ class ArenaScreen:
             for celda in estado["arena"].get("celdas", []):
                 pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
             dibujar_guardianes(screen, estado.get("guardianes", []))
+            propio = sesion.jugador_id()
             for jugador in estado["jugadores"]:
                 x, y = self.visuales.get(jugador["jugador_id"], [jugador["x"], jugador["y"]])
-                pygame.draw.circle(
+                dibujar_jugador(
                     screen,
-                    color_jugador(jugador.get("estado")),
-                    (int(x), int(y)),
+                    x,
+                    y,
                     estado["arena"]["radio"],
+                    numero=jugador.get("numero"),
+                    estado=jugador.get("estado"),
+                    propio=jugador["jugador_id"] == propio,
+                    fuente=self.fuente_etiqueta,
                 )
+            self.particulas.dibujar(screen)
             self.hud.dibujar(screen, estado, sesion.jugador_id())
         if self.controles is not None:
             self.controles.dibujar(screen)  # botones táctiles, solo en el navegador

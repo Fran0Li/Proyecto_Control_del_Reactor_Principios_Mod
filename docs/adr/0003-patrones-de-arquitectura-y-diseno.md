@@ -43,6 +43,7 @@ Los requisitos que más pesan en la arquitectura y la decisión que responde a c
 | **Observer** | **Comportamiento** | `MotorPartida` → `NotificadorWebSocket` | Implementado, US-25 ([ADR 0006](0006-observer-motor-de-partida.md)) |
 | Facade | Estructural | `api_client` del cliente | Implementado ([ADR 0007](0007-facade-api-client.md)) |
 | Bridge | Estructural | `CanalPartida` ↔ `Conexion` (escritorio y navegador) | Implementado ([ADR 0008](0008-bridge-conexion-del-cliente.md)) |
+| Flyweight | Estructural | Partículas de impacto del cliente (`TipoParticula` compartido) | Implementado, US-29 ([ADR 0012](0012-flyweight-particulas.md)) |
 | Strategy | Comportamiento | Movimiento de los guardianes | Planificado para el Sprint 3 (ADR 0006) |
 | State | Comportamiento | Estados del jugador (activo, escudado, aturdido, eliminado) | Planificado para el Sprint 3 (ADR 0006) |
 
@@ -134,6 +135,7 @@ patrón con nuestras clases), alternativas consideradas, consecuencias y estado.
 | [0007](0007-facade-api-client.md) | Facade | Estructural | Las pantallas llaman al backend sin conocer la red | Implementado |
 | [0008](0008-bridge-conexion-del-cliente.md) | Bridge | Estructural | El canal de la partida no depende de si corre en escritorio o en el navegador | Implementado |
 | [0009](0009-repository-persistencia.md) | Repository | Persistencia (no cuenta para el mínimo) | Separar las reglas de negocio del SQL | Implementado |
+| [0012](0012-flyweight-particulas.md) | Flyweight | Estructural | Muchas partículas de impacto comparten pocos tipos (color, tamaño, imagen) | Implementado |
 
 El mínimo del proyecto (un creacional, un estructural y uno de comportamiento) lo cubren Factory,
 Adapter y Observer, los tres ya en `develop` y con pruebas.

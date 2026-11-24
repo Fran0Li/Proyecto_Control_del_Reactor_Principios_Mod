@@ -13,6 +13,7 @@ from src import sesion, sprites
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
+from src.screens.componentes import boton_secundario
 from src.screens.dibujo_fondo import dibujar_fondo
 from src.screens.dibujo_guardianes import dibujar_guardianes
 from src.screens.dibujo_jugadores import dibujar_jugador
@@ -29,6 +30,11 @@ RADIO_CELDA = 10  # el servidor usa el mismo radio para saber cuándo se recoge 
 SPRITE_CELDA = "extra/TorreMagica_Futurista"
 LADO_CELDA = 30  # el sprite es de 30 x 30 y se dibuja sin ampliar
 SUAVIZADO = 0.35  # cuánto se acerca al punto nuevo en cada cuadro (el servidor manda ~20 por s)
+# Caminando se avanzan unos 6 px por estado del servidor; un salto mayor es que lo mandaron a otro
+# lugar (al iniciar la partida todos vuelven a su punto de inicio) y se dibuja allá de una vez.
+SALTO_PX = 100
+# Botón para volver al lobby antes de iniciar (modo práctica): en el celular no hay Esc
+RECT_VOLVER = pygame.Rect(12, 72, 190, 38)
 CONTROLES = ("arriba", "abajo", "izquierda", "derecha", "accion")
 ESPERA_CEREMONIA_S = 3.0  # cuánto se ve el cuadro de posiciones antes de la ceremonia (US-18)
 MOTIVOS = {
@@ -57,6 +63,7 @@ class ArenaScreen:
         self.particulas = SistemaParticulas()  # chispas cuando un guardián alcanza a alguien
         self._estados_previos: dict[int, str | None] = {}
         self._ultimo_cuadro: float | None = None
+        self.boton_volver = boton_secundario(RECT_VOLVER.copy(), "Volver al lobby")
 
     # ciclo de vida
 
@@ -99,8 +106,25 @@ class ArenaScreen:
 
     # eventos y actualización
 
+    def en_practica(self) -> bool:
+        """Antes de que el creador inicie la partida: se puede probar la arena, pero no cuenta."""
+        estado = self.panel.estado if self.panel is not None else None
+        if estado is None or getattr(self.panel, "resultado", None) is not None:
+            return False
+        return estado.get("partida", {}).get("estado", "esperando") == "esperando"
+
+    def _toco_volver(self, event: pygame.event.Event) -> bool:
+        if not self.activa or not self.en_practica():
+            return False
+        if event.type == pygame.FINGERDOWN:  # los dedos vienen normalizados de 0 a 1
+            punto = (event.x * self.ancho, event.y * self.alto)
+            return self.boton_volver.rect.collidepoint(punto)
+        return self.boton_volver.fue_presionado(event)
+
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self._salir()
+        elif self._toco_volver(event):
             self._salir()
         elif self.controles is not None:
             self.controles.procesar(event)
@@ -152,6 +176,8 @@ class ArenaScreen:
             actual = self.visuales.get(jugador_id)
             if actual is None:
                 self.visuales[jugador_id] = [float(jugador["x"]), float(jugador["y"])]
+            elif abs(jugador["x"] - actual[0]) + abs(jugador["y"] - actual[1]) > SALTO_PX:
+                actual[0], actual[1] = float(jugador["x"]), float(jugador["y"])
             else:
                 actual[0] += (jugador["x"] - actual[0]) * SUAVIZADO
                 actual[1] += (jugador["y"] - actual[1]) * SUAVIZADO
@@ -201,6 +227,8 @@ class ArenaScreen:
                 )
             self.particulas.dibujar(screen)
             self.hud.dibujar(screen, estado, sesion.jugador_id())
+            if self.en_practica():
+                self.boton_volver.draw(screen)
         if self.controles is not None:
             self.controles.dibujar(screen)  # botones táctiles, solo en el navegador
         self.aviso_control.dibujar(screen)  # estado del control físico (US-26)

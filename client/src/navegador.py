@@ -1,4 +1,5 @@
-"""Cosas del navegador (pygbag) que no existen en escritorio: abrir páginas y pedir texto."""
+"""Cosas del navegador (pygbag) que no existen en escritorio: abrir páginas, pedir texto y
+pantalla completa en el celular."""
 
 import sys
 
@@ -42,3 +43,39 @@ def pedir_texto(etiqueta: str, actual: str = "") -> str | None:
     if valor is None or str(valor) in ("null", "undefined"):
         return None
     return str(valor)
+
+
+# Pantalla completa y horizontal. El navegador solo la permite justo después de un toque del
+# jugador, y la orientación solo se puede fijar ya en pantalla completa: por eso va encadenado.
+# Funciona en Chrome de Android; Safari del iPhone no tiene pantalla completa para páginas.
+JS_PANTALLA_COMPLETA = """(function () {
+  var d = document, e = d.documentElement;
+  if (d.fullscreenElement || !e.requestFullscreen) return;
+  e.requestFullscreen({navigationUI: "hide"}).then(function () {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("landscape").catch(function () {});
+    }
+  }).catch(function () {});
+})();"""
+
+
+def pantalla_completa() -> bool:
+    """Pide pantalla completa en el celular. True si se pidió (en la compu no hace nada)."""
+    if not es_pantalla_tactil():
+        return False
+    import platform
+
+    try:
+        platform.window.eval(JS_PANTALLA_COMPLETA)
+    except Exception:  # si el navegador no deja, el juego sigue igual que antes
+        return False
+    return True
+
+
+def al_tocar(evento) -> None:
+    """La llama el ciclo principal con cada evento: un toque en el celular pide pantalla completa
+    (si el jugador salió de ella, el siguiente toque la vuelve a pedir)."""
+    import pygame
+
+    if evento.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
+        pantalla_completa()

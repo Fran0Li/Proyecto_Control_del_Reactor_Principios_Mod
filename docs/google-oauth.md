@@ -60,6 +60,20 @@ Debe dar todo `True` y el `redirect` igual a la segunda URI registrada en Google
 `/api/auth/google/iniciar` responde 503, el servidor no ve las credenciales; si Google responde
 `redirect_uri_mismatch`, la URI registrada no coincide con `URL_PUBLICA`.
 
+## Publicar la app (salir de "Prueba")
+
+Mientras la app está en "Prueba" solo entran los usuarios de prueba. Para que cualquier cuenta de
+Google pueda entrar, en **Google Auth Platform → Información de la marca**:
+
+- **Página principal de la aplicación:** `https://control-reactor.northcentralus.cloudapp.azure.com`
+- **Vínculo a la política de privacidad:** `https://control-reactor.northcentralus.cloudapp.azure.com/privacidad.html`
+  (la sirve Caddy desde `deploy/privacidad.html`)
+- **Dominios autorizados:** el dominio de la VM.
+- Sin logo: con logo Google pide verificar la app.
+
+Después, **Público → Publicar app**. Como solo se piden `openid` y `email`, no hace
+falta la verificación de Google.
+
 ## Cómo funciona
 
 1. En el login, "Entrar con Google" abre el navegador en `/auth/google/iniciar?sesion=<id>`.

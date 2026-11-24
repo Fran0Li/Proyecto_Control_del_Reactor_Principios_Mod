@@ -2,6 +2,8 @@
 
 import pygame
 
+from src import navegador
+
 COLOR_CAMPO = (24, 32, 56)
 COLOR_BORDE = (60, 80, 120)
 COLOR_BORDE_ACTIVO = (80, 200, 255)
@@ -29,11 +31,21 @@ class CampoTexto:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.activo = self.rect.collidepoint(event.pos)
+            if self.activo:
+                self._pedir_en_celular()
         elif event.type == pygame.KEYDOWN and self.activo:
             if event.key == pygame.K_BACKSPACE:
                 self.texto = self.texto[:-1]
             elif event.unicode.isprintable() and len(self.texto) < self.largo_maximo:
                 self.texto += event.unicode
+
+    def _pedir_en_celular(self) -> None:
+        """En el celular, tocar el campo abre el cuadro de texto del navegador con el teclado."""
+        valor = navegador.pedir_texto(self.etiqueta, "" if self.oculto else self.texto)
+        if valor is None:
+            return
+        limpio = "".join(c for c in valor if c.isprintable())
+        self.texto = limpio[: self.largo_maximo]
 
     def draw(self, screen: pygame.Surface) -> None:
         etiqueta = self.fuente_etiqueta.render(self.etiqueta, True, COLOR_ETIQUETA)

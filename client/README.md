@@ -121,6 +121,13 @@ abre el cuadro de texto del navegador (`window.prompt`), que sí lo abre; lo esc
 (`src/navegador.py`, `pedir_texto`). En la compu, también en el navegador, se escribe como siempre.
 Limitación: en ese cuadro la contraseña se ve mientras se escribe; en el juego queda con asteriscos.
 
+## Toques: Android e iPhone
+
+Los botones y campos (`Boton`, `CampoTexto`) aceptan el dedo (`FINGERDOWN`) y el clic de mouse.
+Safari del iPhone solo manda el dedo; Android manda el dedo y después un clic inventado a partir de
+él, así que una vez que se vio un dedo se ignoran los clics para no presionar dos veces
+(`componentes.punto_presionado`).
+
 ## Pantalla completa en el celular
 
 En Chrome de Android, el primer toque pone el juego en pantalla completa y horizontal

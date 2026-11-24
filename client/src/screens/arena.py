@@ -116,10 +116,7 @@ class ArenaScreen:
     def _toco_volver(self, event: pygame.event.Event) -> bool:
         if not self.activa or not self.en_practica():
             return False
-        if event.type == pygame.FINGERDOWN:  # los dedos vienen normalizados de 0 a 1
-            punto = (event.x * self.ancho, event.y * self.alto)
-            return self.boton_volver.rect.collidepoint(punto)
-        return self.boton_volver.fue_presionado(event)
+        return self.boton_volver.fue_presionado(event)  # acepta dedo y mouse
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

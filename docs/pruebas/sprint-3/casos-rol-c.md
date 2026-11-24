@@ -1,8 +1,10 @@
-# Casos de prueba del Sprint 3 — Rol C (US-10, US-26, US-11 y US-27)
+# Casos de prueba del Sprint 3 — Rol C (US-10, US-26, US-11, US-27 y apoyo a otras historias)
 
 Cubre el control físico (US-10), el aviso de control desconectado (US-26, parte de la US-10) y la
-extracción de energía del reactor con el botón de acción (US-11) y los logros (US-27). Tasks del
-Board: AB#114, AB#115 y AB#119.
+extracción de energía del reactor con el botón de acción (US-11), los logros y los retos (US-27).
+Al final están los casos de lo que el rol C hizo para historias de otros roles: los sprites y las
+partículas de la arena (US-29), el botón de iniciar con el mínimo de jugadores (US-17), escribir
+desde el celular y publicar el login con Google (US-04). Tasks del Board: AB#114, AB#115 y AB#119.
 La numeración del rol C en el Sprint 3 va de CP-265 a CP-314 (rol A: CP-165 a CP-214; rol B:
 CP-215 a CP-264). Ese rango se llenó, así que los casos nuevos del rol C siguen desde CP-315.
 
@@ -21,10 +23,13 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`, `fw/` = `hardware/firm
 | US-26 Aviso de control desconectado | CP-276 a CP-285 (10) | 10 | — |
 | US-11 Extraer energía del reactor | CP-286 a CP-301 (16) | 15 | 1 (CP-301) |
 | US-27 Logros | CP-302 a CP-318 (17) | 16 | 1 (CP-314) |
-| **Total** | **54** | **52** | **2** |
+| US-27 Retos | CP-319 a CP-329 (11) | 10 | 1 (CP-329) |
+| Apoyo a otras historias | CP-330 a CP-345 (16) | 14 | 2 (CP-343, CP-345) |
+| **Total** | **81** | **76** | **5** |
 
-Los dos pendientes son de aceptación y se ejecutan a mano en una partida real: CP-301 cuando la
-arena dibuje el reactor (arena visual, US-09) y CP-314 en la demo con dos jugadores. Ver
+Los pendientes son de aceptación y se ejecutan a mano en la demo interna del 25/11, con dos
+jugadores en celular y dos en computadora contra la nube: CP-301 (el reactor ya se dibuja desde el
+PR #67), CP-314, CP-329, CP-343 y CP-345. Ver
 [Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación).
 
 ## US-10 Mover el personaje con el control físico
@@ -148,13 +153,75 @@ real de punta a punta. La ceremonia de victoria (US-18) muestra los logros ganad
 | CP-317 | Las penalizaciones de antes de iniciar no cuentan | Ana en la partida, `esperando` | Un guardián la alcanza antes de iniciar; se inicia; fin con 20 puntos | Ana gana `intocable` | OK | I | `s/test_logros.py::test_las_penalizaciones_de_antes_de_iniciar_no_cuentan` |
 | CP-318 | De punta a punta con el motor real | Motor con la jugadora sobre el reactor y el `EvaluadorLogros` suscrito | 3 extracciones de práctica; `iniciar_partida`; 1 extracción; `terminar` | Solo cuentan los 10 de energía de después de iniciar; se guardan `primera_partida`, `primera_victoria` e `intocable` | OK | I | `s/test_logros.py::test_con_el_motor_real_la_practica_no_cuenta_y_el_fin_guarda_logros` |
 
-### Fuera de estos casos
+## US-27 Retos con puntos extra
 
-- **Retos con puntos extra** (criterio 3 de la US-27): no están hechos. Cambian el puntaje durante
-  la partida, así que hay que acordarlos con el rol A (reglas de victoria, US-17). Se agregan casos
-  si se hacen.
-- **Mostrar los logros:** la ceremonia (US-18) ya los muestra; sus casos son del rol A. En el
-  historial (US-20) todavía no; mientras tanto se consultan con `GET /logros`.
+**Criterio de aceptación (ERS, criterio 3 de la US-27):** el jugador puede completar retos durante
+la partida que le dan puntos extra. Tres retos (`server/app/realtime/retos.py`, detalle en
+`docs/logros-y-retos.md`): **Primera chispa** (+10, el primero en sacar energía del reactor
+después de iniciar), **Racha nuclear** (+25, 50 de energía del reactor en 15 s) y **Sin rasguños**
+(+30, 60 s seguidos sin que lo alcance un guardián). `GestorRetos` es otro suscriptor del motor
+(Observer, ADR 0006).
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-319 | El catálogo trae los tres retos sin repetir | — | Catálogo de retos | `racha_nuclear`, `primera_chispa` y `sin_rasgunos`, todos con puntos mayores que 0 | OK | U | `s/test_retos.py::test_el_catalogo_trae_los_tres_retos_sin_repetir` |
+| CP-320 | Antes de iniciar la partida no se cumple ningún reto | Partida `esperando` (práctica) | 6 extracciones en 2 s y 61 s sin golpes | Ningún reto, ningún punto extra y ningún `reto_completado` | OK | U | `s/test_retos.py::test_antes_de_iniciar_no_se_cumple_ningun_reto` |
+| CP-321 | Primera chispa es solo para el primero | Partida iniciada con los jugadores 1 y 2 | El jugador 2 extrae en el segundo 1 y el 1 en el segundo 2 | Solo el jugador 2 cumple `primera_chispa` y suma 10 | OK | U | `s/test_retos.py::test_primera_chispa_es_solo_para_el_primero_que_extrae` |
+| CP-322 | Racha nuclear: 50 de energía dentro de 15 s | Partida iniciada | 1) Extracciones en los segundos 0, 3, 6, 9 y 15. 2) En 0, 6, 9, 12 y 15,5 | 1) Con la cuarta (40) todavía no; con la quinta, justo a los 15 s, se cumple y suma 25. 2) No se cumple: la primera quedó fuera de la ventana | OK | U | `s/test_retos.py::test_racha_nuclear_con_50_de_energia_en_15_segundos`, `s/test_retos.py::test_racha_nuclear_no_cuenta_lo_que_quedo_fuera_de_los_15_segundos` |
+| CP-323 | Sin rasguños: 60 s seguidos sin golpes | Partida iniciada | 1) Estados a los 59 y 60 s sin golpes. 2) Un guardián lo alcanza a los 30 s | 1) A los 59 s no; a los 60 s se cumple y suma 30. 2) La cuenta vuelve a empezar: a los 60 s no, a los 90 s sí | OK | U | `s/test_retos.py::test_sin_rasgunos_a_los_60_segundos_sin_golpes`, `s/test_retos.py::test_un_golpe_de_guardian_reinicia_la_cuenta_de_sin_rasgunos` |
+| CP-324 | Cada reto se cumple una sola vez por partida | Partida iniciada | 200 de energía en 10 s y estados a los 60, 61 y 120 s | Suma 10 + 25 + 30 una sola vez; se publican los tres retos en orden | OK | U | `s/test_retos.py::test_cada_reto_se_cumple_una_sola_vez_por_partida` |
+| CP-325 | Al cumplirse se avisa con sus datos | Partida iniciada con el jugador 7 | El jugador 7 extrae | Evento `reto_completado` con `jugador_id` 7, `reto`, `nombre` y `puntos` 10 | OK | U | `s/test_retos.py::test_publica_reto_completado_con_sus_datos` |
+| CP-326 | Después del fin no hay retos y una partida nueva empieza de cero | 1) Partida finalizada. 2) Jugador con `primera_chispa` | 1) Extracción y 120 s sin golpes. 2) Llega otro `partida_iniciada` | 1) No suma nada. 2) Los retos cumplidos se olvidan | OK | U | `s/test_retos.py::test_terminada_la_partida_ya_no_se_cumplen_retos`, `s/test_retos.py::test_al_iniciar_otra_vez_se_olvida_lo_anterior` |
+| CP-327 | Con el motor real los puntos se suman en la partida y cuentan para ganar | Motor con la jugadora sobre el reactor y `GestorRetos` suscrito | 1) 3 extracciones de práctica, iniciar, 5 extracciones y 60 s. 2) Meta de 20 puntos y 1 extracción | 1) Puntaje 50 + 10 + 25 y después + 30; la práctica no cuenta. 2) 10 de energía + 10 de Primera chispa terminan la partida con motivo `puntaje` | OK | I | `s/test_retos.py::test_con_el_motor_real_los_retos_suman_puntos_en_la_partida`, `s/test_retos.py::test_los_puntos_de_los_retos_cuentan_para_ganar` |
+| CP-328 | Cada partida tiene los retos y quedan guardados | `GestorMotores`; base de la prueba con Ana y una partida | 1) Crear el motor de una partida. 2) Llega un `reto_completado` de Ana | 1) El motor tiene un `GestorRetos` suscrito. 2) Queda una fila en `eventos` con el tipo, Ana y los datos del reto | OK | I | `s/test_retos.py::test_el_gestor_suscribe_los_retos_a_cada_partida`, `s/test_retos.py::test_los_retos_cumplidos_quedan_en_la_tabla_eventos` |
+| CP-329 | Retos en una partida real | Nube; dos cuentas en la misma partida; partida iniciada | El jugador 1 es el primero en extraer y hace 5 extracciones seguidas; el jugador 2 se aleja de los guardianes 60 s | El jugador 1 suma +10 y +25 en el HUD y el jugador 2 +30; cada reto aparece una vez como `reto_completado` en la tabla `eventos` | **Pendiente** | A | Manual en la demo (procedimiento abajo) |
+
+**Mostrar los logros:** la ceremonia (US-18) los muestra al terminar; sus casos son del rol A. En
+el historial (US-20) todavía no; mientras tanto se consultan con `GET /logros`.
+
+## Apoyo a otras historias (hecho por el rol C)
+
+### US-29 Efectos visuales: sprites y partículas de impacto
+
+Los personajes, las barreras y los guardianes se dibujan con los sprites de `client/assets/sprites/`.
+Cuando un guardián alcanza a un jugador salen chispas y una onda en ese punto (Flyweight, ADR 0012).
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-330 | Cada jugador se ve con su personaje y el color de su número | Sprites de los 4 personajes | Jugadores con número 1 a 4, y uno sin número o con un número raro | Personaje y aro de su color (rojo, verde, naranja y magenta); sin número usa el primero; el personaje cabe en el aro; la etiqueta va arriba | OK | U | `c/test_dibujo_jugadores.py::test_cada_numero_tiene_su_personaje_y_su_color`, `::test_dibuja_el_aro_del_color_de_su_numero_y_el_personaje_adentro`, `::test_sin_numero_o_con_uno_raro_usa_el_primero`, `::test_el_personaje_cabe_dentro_del_aro`, `::test_la_etiqueta_va_arriba_del_jugador` |
+| CP-331 | Se ve el estado del jugador | — | Jugador `aturdido` y jugador `escudado` | Aturdido: personaje y aro grises. Escudado: aro azul y más grueso | OK | U | `c/test_dibujo_jugadores.py::test_aturdido_se_ve_gris`, `::test_escudado_tiene_el_aro_azul_y_mas_grueso` |
+| CP-332 | Barreras con el sprite del muro y guardianes con el tanque morado | Sprites `muro.png` y `guardian.png` | Barrera fija, barrera móvil y guardián | Barreras rellenas de muro en cuadros de 30 sin salirse del rectángulo (la móvil con su borde); guardián teñido de morado dentro de su aro | OK | U | `c/test_dibujo_obstaculos.py::test_la_barrera_se_rellena_con_el_sprite_del_muro_en_cuadros_de_30`, `::test_el_muro_no_se_sale_del_rectangulo`, `::test_la_barrera_movil_lleva_el_muro_y_su_borde`, `c/test_dibujo_guardianes.py::test_el_guardian_es_el_tanque_morado_dentro_de_su_aro`, `::test_el_sprite_del_guardian_esta_tenido_de_morado` |
+| CP-333 | Si falta una imagen se dibuja la figura de antes | Sin la carpeta de sprites | Dibujar jugador, barrera y guardián | Círculo del jugador, rectángulo gris de la barrera y círculo morado del guardián | OK | U | `c/test_dibujo_jugadores.py::test_si_falta_la_imagen_dibuja_el_circulo_de_antes`, `::test_una_imagen_que_no_existe_devuelve_none`, `c/test_dibujo_obstaculos.py::test_la_barrera_es_gris`, `c/test_dibujo_guardianes.py::test_el_guardian_es_un_circulo_morado_con_borde_oscuro` |
+| CP-334 | Muchas partículas comparten pocos tipos (Flyweight) | — | Pedir el mismo tipo dos veces; varios impactos | La fábrica devuelve el mismo objeto; cientos de partículas usan solo 5 tipos | OK | U | `c/test_particulas.py::test_la_fabrica_reutiliza_el_mismo_tipo_para_los_mismos_datos`, `::test_muchas_particulas_comparten_pocos_tipos` |
+| CP-335 | Un impacto lanza chispas que se apagan | — | `impacto(x, y)` y avanzar el tiempo | Chispas en todas las direcciones cerca del impacto; sin tiempo no se mueven; la onda dura 0,3 s y las chispas menos de 1 s | OK | U | `c/test_particulas.py::test_el_impacto_lanza_chispas_en_todas_direcciones`, `::test_dibuja_cerca_del_impacto`, `::test_sin_tiempo_no_se_mueven`, `::test_la_onda_dura_poco`, `::test_las_chispas_se_desvanecen_y_desaparecen` |
+| CP-336 | Salen chispas cuando un guardián alcanza al jugador, una vez por golpe | Arena con un jugador | El servidor manda al jugador `normal` y después `aturdido`; sigue aturdido; se recupera y lo vuelven a alcanzar; otro llega ya aturdido | Chispas al pasar a aturdido, no mientras sigue aturdido, otra vez en el segundo golpe y nunca para quien llegó aturdido; se borran al salir de la arena | OK | I | `c/test_particulas.py::test_cuando_un_guardian_alcanza_al_jugador_salen_chispas`, `::test_seguir_aturdido_no_lanza_mas_chispas`, `::test_otro_golpe_despues_de_recuperarse_vuelve_a_lanzar_chispas`, `::test_un_jugador_que_llega_ya_aturdido_no_lanza_chispas`, `::test_las_chispas_se_mueven_con_el_reloj_de_la_arena_y_se_borran_al_salir` |
+
+### US-17 Iniciar la partida con el mínimo de jugadores
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-337 | Con un solo jugador el botón está en gris y no inicia | El creador en el lobby, solo él conectado | Tocar el botón | Dice "Esperando jugadores (1/2)", en gris, y no llama al servidor | OK | I | `c/test_inicio_partida.py::test_con_un_solo_jugador_el_boton_sale_en_gris_y_no_inicia` |
+| CP-338 | Al unirse el segundo el botón se activa | El creador solo en el lobby | Se conecta un segundo jugador; el mismo jugador aparece conectado dos veces | Con el segundo pasa a "Iniciar partida" en azul; el mismo jugador dos veces cuenta como uno | OK | I | `c/test_inicio_partida.py::test_cuando_se_une_el_segundo_el_boton_se_activa`, `::test_un_jugador_conectado_dos_veces_cuenta_una_sola_vez` |
+
+### Escribir desde el celular (registro e inicio de sesión, RNF-07)
+
+El canvas de pygame no abre el teclado del teléfono. En pantallas táctiles, tocar un campo de texto
+abre el cuadro de texto del navegador (`client/src/navegador.py`).
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-339 | En el celular, tocar el campo pide el texto | Navegador de celular simulado | Tocar el campo de usuario y escribir `francisco`; tocarlo otra vez y cancelar | El campo queda con `francisco`; al cancelar queda como estaba | OK | U | `c/test_teclado_celular.py::test_en_el_celular_tocar_el_campo_pide_el_texto`, `::test_si_se_cancela_el_campo_queda_como_estaba` |
+| CP-340 | La contraseña anterior no se muestra y se respeta el largo | Navegador de celular simulado | Campo de contraseña con texto; texto con salto de línea y más de 120 caracteres | El cuadro no muestra la contraseña anterior; se quitan los saltos de línea y se corta en 120 | OK | U | `c/test_teclado_celular.py::test_la_contrasena_no_se_muestra_en_el_cuadro`, `::test_respeta_el_largo_maximo_y_quita_saltos_de_linea` |
+| CP-341 | En la compu se escribe como siempre | Escritorio, o navegador de compu simulado | Tocar el campo; tocar fuera del campo | No se abre ningún cuadro; el campo se activa para escribir con el teclado | OK | U | `c/test_teclado_celular.py::test_en_escritorio_no_se_abre_ningun_cuadro`, `::test_en_un_navegador_de_compu_se_escribe_con_el_teclado_normal`, `::test_tocar_fuera_del_campo_no_pide_nada` |
+| CP-342 | Las pantallas cargan en el navegador sin librerías de escritorio | — | Importar el lobby, la búsqueda de partidas y el canal (con los campos de texto) | No se importa `websockets`, `requests` ni `serial` | OK | U | `c/test_canal_partida.py::test_cargar_las_pantallas_no_importa_librerias_de_escritorio` (regresión) |
+| CP-343 | Registro e inicio de sesión desde un celular real | Nube; celular Android o iPhone | Abrir el dominio, crear una cuenta escribiendo en los campos e iniciar sesión | Sale el teclado del teléfono en cada campo; la cuenta se crea y se entra al lobby | **Pendiente** | A | Manual en la demo |
+
+### US-04 Publicar el login con Google
+
+| ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CP-344 | La política de privacidad está publicada en el dominio | PR #71 desplegado | Abrir `https://control-reactor.northcentralus.cloudapp.azure.com/privacidad.html` en la compu y en el celular | Carga la página con los datos que se guardan y cómo pedir que se borren | OK (24/11/2026) | A | Manual |
+| CP-345 | Entra con Google una cuenta que no es de prueba | App en "Producción" en Google Auth Platform | En la nube, "Entrar con Google" con una cuenta que no está en la lista de usuarios de prueba | Entra al lobby; si es nueva, se crea su cuenta | **Pendiente** | A | Manual en la demo |
 
 ## Cómo ejecutar los casos de aceptación
 
@@ -186,6 +253,17 @@ reactor. El 17/11/2026 la extracción con el botón físico funcionó en el serv
 `probar_control.py`: +10 tocando el reactor, +0 lejos); falta que la arena dibuje el reactor para
 verlo en el juego.
 
+**En la nube (demo interna y defensa):** los celulares abren
+`https://control-reactor.northcentralus.cloudapp.azure.com`; las computadoras corren
+`.\jugar.ps1 -Nube` en `client/` (con `-SinControl` si no tienen el Arduino). Para ver las tablas:
+`ssh reactor@control-reactor.northcentralus.cloudapp.azure.com`, `cd ~/reactor` y
+`docker compose -f docker-compose.prod.yml exec db psql -U reactor -d reactor`.
+
+**CP-329 (retos):** con la partida iniciada, el jugador 1 camina al reactor y es el primero en
+extraer (+10, Primera chispa); después extrae 5 veces seguidas (+25, Racha nuclear). El jugador 2 se
+mantiene lejos de los guardianes 60 s (+30, Sin rasguños). Revisar los puntajes en el HUD y en psql:
+`SELECT jugador_id, datos FROM eventos WHERE tipo = 'reto_completado' ORDER BY id DESC;`.
+
 **CP-314 (logros en una partida real):** con `docker compose up` en la raíz, entrar con dos cuentas
 (una con el control y otra con el teclado) a la misma partida, iniciarla y jugarla hasta el final. Después, en
 otra terminal: `docker compose exec db psql -U reactor -d reactor -c "SELECT jugador_id, logro,
@@ -206,6 +284,10 @@ Ejecución del 16/11/2026 sobre `develop` (`ca10ea7`, con la US-27 y el PR #49 y
 Ejecución del 19/11/2026 sobre `develop` (`c92c0d2`, con el fin de partida, el HUD y la ceremonia
 del rol A) más los cambios de logros de CP-315 a CP-318: **373 pruebas del servidor** en
 PostgreSQL 16 **y 235 del cliente pasan**.
+
+Ejecución del 24/11/2026 sobre `develop` (`277dc37`, con los retos, los escenarios, los sprites,
+las partículas, el botón de iniciar y el teclado del celular): **536 pruebas del servidor** en
+PostgreSQL 16 **y 338 del cliente pasan**.
 
 Para repetirlas: `python -m pytest -q` dentro de `server/` y de `client/` (el cliente con
 `SDL_VIDEODRIVER=dummy`), y el firmware con los comandos de `hardware/firmware/README.md`.

@@ -14,7 +14,7 @@ import asyncio
 
 import pygame
 
-from src import sesion
+from src import navegador, sesion
 from src.api_client import estado_servidor
 from src.config import FPS, WINDOW_SIZE
 from src.screens.arena import ArenaScreen
@@ -64,6 +64,7 @@ async def main() -> None:
     running = True
     while running:
         for event in pygame.event.get():
+            navegador.al_tocar(event)  # en el celular, el primer toque pone pantalla completa
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:

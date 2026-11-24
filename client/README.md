@@ -121,6 +121,23 @@ abre el cuadro de texto del navegador (`window.prompt`), que sí lo abre; lo esc
 (`src/navegador.py`, `pedir_texto`). En la compu, también en el navegador, se escribe como siempre.
 Limitación: en ese cuadro la contraseña se ve mientras se escribe; en el juego queda con asteriscos.
 
+## Toques: Android e iPhone
+
+Los botones y campos (`Boton`, `CampoTexto`) aceptan el dedo (`FINGERDOWN`) y el clic de mouse.
+Safari del iPhone solo manda el dedo; Android manda el dedo y después un clic inventado a partir de
+él, así que una vez que se vio un dedo se ignoran los clics para no presionar dos veces
+(`componentes.punto_presionado`).
+
+## Pantalla completa en el celular
+
+En Chrome de Android, el primer toque pone el juego en pantalla completa y horizontal
+(`navegador.al_tocar`, desde `main.py`); si el jugador sale, el siguiente toque la vuelve a pedir.
+Safari del iPhone no permite pantalla completa en páginas, así que ahí se ve como antes.
+
+Antes de que el creador inicie la partida, la arena es de práctica (no cuenta) y muestra el botón
+"Volver al lobby", porque en el celular no hay Esc. Si la partida empieza mientras alguien está en
+práctica, el servidor lo manda a su punto de inicio con 0 puntos y el reloj arranca.
+
 ## Pruebas
 
 ```

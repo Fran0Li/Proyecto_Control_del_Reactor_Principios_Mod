@@ -25,6 +25,7 @@ def panel_con_celdas(celdas, jugadores=()):
         "tipo": "estado",
         "jugadores": [{"jugador_id": i, "x": x, "y": y} for i, x, y in jugadores],
         "arena": {**ARENA, "celdas": celdas},
+        "partida": {"estado": "en_curso"},
     }
     return panel
 

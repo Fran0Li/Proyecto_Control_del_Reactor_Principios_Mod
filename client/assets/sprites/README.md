@@ -8,7 +8,19 @@ juego dibuja la figura de antes (círculo o rectángulo).
 | `jugador_1.png` a `jugador_4.png` | El personaje de cada jugador según su número (1 a 4). En la arena se dibuja a 32 x 32 dentro del aro de su color |
 | `muro.png` | Relleno de las barreras fijas y móviles, en cuadros de 30 x 30 (los obstáculos de los escenarios miden múltiplos de 30) |
 | `guardian.png` | Los guardianes (US-15): se tiñe de morado y va a 32 x 32 dentro de su aro morado oscuro |
-| `extra/` | Disponibles para lo que falta (reactor, terminales): base, torres y unidad rápida |
+| `extra/Base_Futurista.png` | El reactor, el mismo en todos los mapas. Se amplía a 90 x 90 (3 veces), con un halo que late y se apaga con la energía |
+| `extra/TorreMagica_Futurista.png` | Las celdas de energía, a 30 x 30 |
+| `lab.png` | Fondo del laboratorio |
+| `estacion.png` | Fondo de la estación espacial |
+| `fabrica.png` | Fondo de la planta industrial |
+| `centroinvestigacion.png` | Fondo del centro de investigación |
+| `militar.png` | Fondo del complejo militar |
+| `extra/` (el resto) | Sin usar todavía: torre básica, torre pesada y unidad rápida |
+
+Los fondos se ajustan solos a 960 x 540, el tamaño de la arena (`src/screens/dibujo_fondo.py`).
+Conviene que sean de esa medida o de la misma proporción (16:9), vistos desde arriba y sin ruido
+en el centro, para que se lean el reactor y las celdas. Entre más pesen, más tarda en cargar la
+versión del navegador.
 
 ## Efectos
 

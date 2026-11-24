@@ -9,10 +9,11 @@ from collections.abc import Callable
 
 import pygame
 
-from src import sesion
+from src import sesion, sprites
 from src.config import CONTROL_PUERTO
 from src.entrada import ControlesJugador, crear_fuentes
 from src.screens.aviso_control import AvisoControl
+from src.screens.dibujo_fondo import dibujar_fondo
 from src.screens.dibujo_guardianes import dibujar_guardianes
 from src.screens.dibujo_jugadores import dibujar_jugador
 from src.screens.dibujo_obstaculos import dibujar_obstaculos
@@ -25,6 +26,8 @@ BLANCO = (255, 255, 255)
 ROJO = (220, 30, 30)
 AMARILLO = (240, 190, 20)
 RADIO_CELDA = 10  # el servidor usa el mismo radio para saber cuándo se recoge una celda
+SPRITE_CELDA = "extra/TorreMagica_Futurista"
+LADO_CELDA = 30  # el sprite es de 30 x 30 y se dibuja sin ampliar
 SUAVIZADO = 0.35  # cuánto se acerca al punto nuevo en cada cuadro (el servidor manda ~20 por s)
 CONTROLES = ("arriba", "abajo", "izquierda", "derecha", "accion")
 ESPERA_CEREMONIA_S = 3.0  # cuánto se ve el cuadro de posiciones antes de la ceremonia (US-18)
@@ -163,6 +166,7 @@ class ArenaScreen:
         estado = self.panel.estado if self.panel is not None else None
         if estado is not None:
             # la arena del servidor mide 960 x 540 y la ventana tiene 960 de ancho: se dibuja 1 a 1
+            dibujar_fondo(screen, estado.get("escenario"))
             dibujar_obstaculos(screen, estado["arena"].get("obstaculos", []))
             reactor = estado["arena"].get("reactor")
             if reactor is not None:
@@ -174,8 +178,13 @@ class ArenaScreen:
                     energia.get("capacidad"),
                     self._reloj(),
                 )
+            celda_sprite = sprites.cargar(SPRITE_CELDA, (LADO_CELDA, LADO_CELDA))
             for celda in estado["arena"].get("celdas", []):
-                pygame.draw.circle(screen, AMARILLO, (celda["x"], celda["y"]), RADIO_CELDA)
+                centro_celda = (celda["x"], celda["y"])
+                if celda_sprite is not None:
+                    screen.blit(celda_sprite, celda_sprite.get_rect(center=centro_celda))
+                else:
+                    pygame.draw.circle(screen, AMARILLO, centro_celda, RADIO_CELDA)
             dibujar_guardianes(screen, estado.get("guardianes", []))
             propio = sesion.jugador_id()
             for jugador in estado["jugadores"]:

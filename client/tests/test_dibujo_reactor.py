@@ -5,6 +5,8 @@ import os
 import pygame
 import pytest
 
+from src import sprites
+from src.screens import dibujo_reactor
 from src.screens.dibujo_reactor import (
     BORDE,
     CARCASA,
@@ -79,3 +81,46 @@ def test_una_energia_fuera_de_rango_no_rompe_el_dibujo():
     assert color(pantalla_con(500, 100), 150, 100) == NUCLEO
     assert color(pantalla_con(-5, 100), 150, 100) == NUCLEO_APAGADO
     assert color(pantalla_con(10, 0), 150, 100) == NUCLEO  # capacidad 0: se dibuja lleno
+
+
+# con el sprite del reactor
+
+
+def test_el_sprite_del_reactor_esta_en_la_carpeta_de_imagenes():
+    assert (sprites.CARPETA / f"{dibujo_reactor.SPRITE}.png").exists()
+
+
+def test_con_sprite_el_reactor_es_el_mismo_en_cualquier_posicion(con_sprites_extra):
+    uno = pantalla_con(100, 100, reactor={"x": 100, "y": 100, "radio": 40})
+    otro = pantalla_con(100, 100, reactor={"x": 200, "y": 100, "radio": 40})
+    recorte_uno = pygame.image.tobytes(uno.subsurface((55, 55, 90, 90)), "RGB")
+    recorte_otro = pygame.image.tobytes(otro.subsurface((155, 55, 90, 90)), "RGB")
+    assert recorte_uno == recorte_otro
+
+
+def test_con_sprite_el_reactor_ocupa_el_lugar_del_reactor(con_sprites_extra):
+    pantalla = pantalla_con(100, 100)
+    assert color(pantalla, 150, 100) != BLANCO  # el centro
+    assert color(pantalla, 150 + 80, 100) == BLANCO  # fuera del halo
+    assert color(pantalla, 5, 5) == BLANCO
+
+
+def test_con_sprite_se_oscurece_al_vaciarse_la_energia(con_sprites_extra):
+    def brillo(superficie):
+        r, g, b = color(superficie, 150, 100)
+        return r + g + b
+
+    assert brillo(pantalla_con(0, 100)) < brillo(pantalla_con(100, 100))
+
+
+def test_con_sprite_el_halo_late_con_el_tiempo(con_sprites_extra):
+    grande = pantalla_con(100, 100, tiempo=PERIODO_LATIDO_S / 4)
+    pequeno = pantalla_con(100, 100, tiempo=3 * PERIODO_LATIDO_S / 4)
+    # a 55 px del centro (fuera del sprite) el halo grande llega y el pequeño no
+    assert color(grande, 150 + 55, 100) != BLANCO
+    assert color(pequeno, 150 + 55, 100) == BLANCO
+
+
+def test_con_sprite_sin_energia_ni_capacidad_no_falla(con_sprites_extra):
+    assert color(pantalla_con(), 150, 100) != BLANCO
+    assert color(pantalla_con(10, 0), 150, 100) != BLANCO

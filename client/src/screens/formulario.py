@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 import pygame
 
 from src.screens.componentes import CampoTexto
+from src.screens.dibujo_fondo import dibujar_fondo_menu
 
 COLOR_FONDO = (12, 16, 32)
 COLOR_TITULO = (80, 200, 255)
@@ -70,7 +71,7 @@ class PantallaFormulario:
         self.campos[(indice + 1) % len(self.campos)].activo = True
 
     def dibujar_base(self, screen: pygame.Surface) -> None:
-        screen.fill(COLOR_FONDO)
+        dibujar_fondo_menu(screen, COLOR_FONDO)
         titulo = self.fuente_titulo.render(self.titulo, True, COLOR_TITULO)
         screen.blit(titulo, titulo.get_rect(center=(self.centro_x, self.y_titulo)))
         for campo in self.campos:

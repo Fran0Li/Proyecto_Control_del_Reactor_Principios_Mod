@@ -16,6 +16,7 @@ from app.realtime.obstaculos import (
     VELOCIDAD_BARRERA_MOVIL,
     GestorObstaculos,
     posicion_en,
+    sacar,
     toca,
 )
 
@@ -285,3 +286,73 @@ class TestBarreraMovil:
         motor.aplicar_entrada(1, "derecha", "presionado")
         avanzar(motor, ticks_para(2.0))
         assert posicion(motor)[0] < 100 - RADIO + 1
+
+
+class TestEmpujeDeLaBarreraMovil:
+    """La barrera móvil nunca atraviesa al jugador: lo empuja o lo bloquea."""
+
+    def test_sacar_deja_al_circulo_libre_por_el_lado_mas_cercano(self):
+        barrera = Obstaculo(100, 0, 20, 200, "barrera")
+        x, y = sacar(110, 100, RADIO, barrera)  # el centro quedó adentro, más cerca de la izquierda
+        assert x == pytest.approx(100 - RADIO)
+        assert not toca(x, y, RADIO - 0.001, barrera)
+
+    def test_sacar_no_mueve_a_quien_no_toca(self):
+        barrera = Obstaculo(100, 0, 20, 200, "barrera")
+        assert sacar(10, 100, RADIO, barrera) == (10, 100)
+
+    def test_sacar_desde_una_esquina_se_aleja_en_diagonal(self):
+        barrera = Obstaculo(100, 100, 20, 20, "barrera")
+        x, y = sacar(95, 95, RADIO, barrera)
+        assert x < 95 and y < 95
+        assert not toca(x, y, RADIO - 0.001, barrera)
+
+    def test_empuja_a_un_jugador_quieto(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        x = 150.0  # la barrera sube desde x = 100 hasta pasar por donde está el jugador
+        for _ in range(ticks_para(5.0)):
+            gestor.actualizar(CICLO_S)
+            x, _ = gestor.empujar(x, 100)
+            assert not any(
+                toca(x, 100, RADIO, o) for o in gestor._actuales if o.tipo == BARRERA_MOVIL
+            )
+        assert x > 150  # lo fue empujando hacia adelante
+
+    def test_no_toca_a_los_que_ya_estan_libres(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        assert gestor.empujar(10, 100) == (10, 100)
+
+    def test_las_puertas_y_barreras_fijas_no_empujan(self):
+        fijas = [Obstaculo(90, 0, 40, 200, "barrera"), Obstaculo(90, 0, 40, 200, "puerta")]
+        gestor = GestorObstaculos(fijas, RADIO)
+        assert gestor.empujar(110, 100) == (110, 100)
+
+    def test_en_el_motor_la_barrera_empuja_al_jugador_quieto(self):
+        # el jugador espera en x = 150 y la barrera viene desde x = 100 hacia 400
+        motor = motor_con([barrera_movil(100, 0, 380, 0, alto=200)], inicio=(150, 100))
+        for _ in range(ticks_para(6.0)):
+            avanzar(motor, 1)
+            x, y = posicion(motor)
+            barrera = motor.estado()["arena"]["obstaculos"][0]
+            assert not toca(
+                x,
+                y,
+                RADIO,
+                Obstaculo(**{k: barrera[k] for k in ("x", "y", "ancho", "alto")}, tipo="barrera"),
+            )
+        assert posicion(motor)[0] > 150
+
+    def test_en_el_motor_nunca_la_atraviesa_si_el_jugador_camina_hacia_ella(self):
+        motor = motor_con([barrera_movil(300, 0, 100, 0, alto=200)], inicio=(50, 100))
+        motor.aplicar_entrada(1, "derecha", "presionado")  # ella viene hacia él y él hacia ella
+        for _ in range(ticks_para(8.0)):
+            avanzar(motor, 1)
+            x, _ = posicion(motor)
+            barrera = motor.estado()["arena"]["obstaculos"][0]
+            assert x + RADIO <= barrera["x"] + 0.02  # siempre del lado izquierdo de la barrera
+
+    def test_el_jugador_puede_moverse_mientras_lo_empujan(self):
+        motor = motor_con([barrera_movil(100, 0, 380, 0, alto=200)], inicio=(150, 100))
+        motor.aplicar_entrada(1, "abajo", "presionado")
+        avanzar(motor, ticks_para(1.0))
+        assert posicion(motor)[1] > 100  # camina libremente en el otro eje

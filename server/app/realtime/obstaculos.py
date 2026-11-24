@@ -4,6 +4,7 @@
 - trampa: no bloquea, pero frena al jugador mientras la pisa.
 - puerta: bloquea mientras está cerrada y se abre y se cierra sola cada cierto tiempo.
 - barrera móvil: bloquea como una barrera, pero va y viene en línea recta entre dos puntos.
+  Si se le viene encima a un jugador, lo empuja: nunca lo atraviesa.
 """
 
 import math
@@ -19,6 +20,7 @@ BARRERA_MOVIL = "barrera_movil"
 FACTOR_TRAMPA = 0.4  # velocidad que conserva el jugador sobre una trampa (40 %)
 PUERTA_CERRADA_S = 4.0  # la puerta empieza cerrada
 PUERTA_ABIERTA_S = 4.0
+MARGEN_EMPUJE = 0.01  # px de sobra al empujar, para que quede libre y no rozando
 VELOCIDAD_BARRERA_MOVIL = 30.0  # px por segundo: el jugador (120) puede rebasarla con facilidad
 
 
@@ -28,6 +30,29 @@ def toca(x: float, y: float, radio: float, obstaculo: Obstaculo) -> bool:
     cercano_x = min(max(x, obstaculo.x), obstaculo.x + obstaculo.ancho)
     cercano_y = min(max(y, obstaculo.y), obstaculo.y + obstaculo.alto)
     return math.hypot(x - cercano_x, y - cercano_y) < radio
+
+
+def sacar(x: float, y: float, radio: float, obstaculo: Obstaculo) -> tuple[float, float]:
+    """El punto más cercano a (x, y) donde el círculo ya no se mete en el obstáculo.
+    Si no lo toca, devuelve el mismo punto."""
+    if not toca(x, y, radio, obstaculo):
+        return x, y
+    izquierda, derecha = obstaculo.x, obstaculo.x + obstaculo.ancho
+    arriba, abajo = obstaculo.y, obstaculo.y + obstaculo.alto
+    cercano_x = min(max(x, izquierda), derecha)
+    cercano_y = min(max(y, arriba), abajo)
+    distancia = math.hypot(x - cercano_x, y - cercano_y)
+    if distancia > 0:  # el centro está afuera del rectángulo: se aleja del punto más cercano
+        escala = radio / distancia
+        return cercano_x + (x - cercano_x) * escala, cercano_y + (y - cercano_y) * escala
+    # el centro quedó adentro del rectángulo: sale por el lado más cercano
+    salidas = (
+        (x - izquierda, (izquierda - radio, y)),
+        (derecha - x, (derecha + radio, y)),
+        (y - arriba, (x, arriba - radio)),
+        (abajo - y, (x, abajo + radio)),
+    )
+    return min(salidas, key=lambda salida: salida[0])[1]
 
 
 def posicion_en(obstaculo: Obstaculo, tiempo: float, velocidad: float) -> Obstaculo:
@@ -117,6 +142,15 @@ class GestorObstaculos:
             return nuevo_x, y
         if not self._bloqueado(x, nuevo_y):
             return x, nuevo_y
+        return x, y
+
+    def empujar(self, x: float, y: float) -> tuple[float, float]:
+        """Si una barrera móvil se le metió encima al jugador en (x, y), lo saca por el lado más
+        cercano. Así la barrera lo empuja aunque esté quieto o camine hacia ella, y nunca lo
+        atraviesa. Una puerta que se cierra encima no empuja (el jugador sale caminando)."""
+        for obstaculo in self._actuales:
+            if obstaculo.tipo == BARRERA_MOVIL:
+                x, y = sacar(x, y, self._radio + MARGEN_EMPUJE, obstaculo)
         return x, y
 
     def a_dicts(self) -> list[dict]:

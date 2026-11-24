@@ -15,6 +15,7 @@ import pygame
 
 from src.api_client import ApiError, obtener_resultado
 from src.screens.componentes import Boton
+from src.screens.dibujo_fondo import dibujar_fondo_menu
 
 COLOR_FONDO = (12, 16, 32)
 COLOR_TITULO = (255, 215, 80)
@@ -174,7 +175,7 @@ class CeremoniaScreen:
     # dibujo
 
     def draw(self, screen: pygame.Surface) -> None:
-        screen.fill(COLOR_FONDO)
+        dibujar_fondo_menu(screen, COLOR_FONDO)
         self.confeti.dibujar(screen)
         self._texto(screen, self.fuente_titulo, titulo(self.posiciones), COLOR_TITULO, 50)
         self._texto(screen, self.fuente, self.motivo, COLOR_SUAVE, 88)

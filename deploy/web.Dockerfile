@@ -13,3 +13,5 @@ RUN rm -rf tests && python -m pygbag --build .
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=cliente /compilar/client/build/web /srv
+# Política de privacidad: Google la pide para publicar el login (docs/google-oauth.md)
+COPY deploy/privacidad.html /srv/privacidad.html

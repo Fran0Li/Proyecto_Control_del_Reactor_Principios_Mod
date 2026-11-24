@@ -59,12 +59,13 @@ def clic(boton):
     return pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=boton.rect.center, button=1)
 
 
-def panel_abierto(monkeypatch, es_creador=True, estado_partida="esperando"):
+def panel_abierto(monkeypatch, es_creador=True, estado_partida="esperando", conectados=(1, 2)):
     monkeypatch.setattr(panel_canal, "CanalPartida", CanalFalso)
     panel = PanelCanal()
     asyncio.run(panel.abrir(4, "token-ana", es_creador=es_creador))
     panel.canal.pendientes = [
-        {"tipo": "estado", "jugadores": [], "partida": {"estado": estado_partida}}
+        {"tipo": "presencia", "conectados": list(conectados)},
+        {"tipo": "estado", "jugadores": [], "partida": {"estado": estado_partida}},
     ]
     panel.update()
     panel.draw(pygame.display.get_surface(), ANCHO // 2, 460)  # ubica los botones
@@ -96,6 +97,39 @@ def test_iniciar_partida_manda_el_token(monkeypatch):
 
 def test_el_creador_puede_iniciar_mientras_se_espera(monkeypatch):
     assert panel_abierto(monkeypatch).puede_iniciar()
+
+
+def test_con_un_solo_jugador_el_boton_sale_en_gris_y_no_inicia(monkeypatch):
+    llamadas = []
+
+    async def iniciar(partida_id, token):
+        llamadas.append(partida_id)
+
+    monkeypatch.setattr(panel_canal, "iniciar_partida", iniciar)
+    panel = panel_abierto(monkeypatch, conectados=(1,))
+
+    assert panel.puede_iniciar() and not panel.hay_jugadores_suficientes()
+    assert panel.boton_esperando.texto == "Esperando jugadores (1/2)"
+    centro = panel.boton_esperando.rect.center
+    assert pygame.display.get_surface().get_at(centro)[:3] != panel.boton_iniciar.color
+    panel.handle_event(clic(panel.boton_esperando))
+    assert not panel.ocupado() and llamadas == []
+
+
+def test_cuando_se_une_el_segundo_el_boton_se_activa(monkeypatch):
+    panel = panel_abierto(monkeypatch, conectados=(1,))
+    panel.canal.pendientes = [{"tipo": "presencia", "conectados": [1, 2]}]
+    panel.update()
+    pantalla = pygame.display.get_surface()
+    pantalla.fill((0, 0, 0))
+    panel.draw(pantalla, ANCHO // 2, 460)
+
+    assert panel.hay_jugadores_suficientes()
+    assert pantalla.get_at(panel.boton_iniciar.rect.midleft)[:3] == panel.boton_iniciar.color
+
+
+def test_un_jugador_conectado_dos_veces_cuenta_una_sola_vez(monkeypatch):
+    assert not panel_abierto(monkeypatch, conectados=(1, 1)).hay_jugadores_suficientes()
 
 
 def test_quien_se_unio_no_ve_el_boton_de_iniciar(monkeypatch):

@@ -1,7 +1,8 @@
 """Panel que muestra el canal en tiempo real de la partida y quién está en línea.
 
-También tiene el botón para que el creador inicie la partida (US-17): cuando el servidor avisa
-que empezó, el panel pide ir a la arena, y cuando termina guarda las posiciones finales.
+También tiene el botón para que el creador inicie la partida (US-17): sale en gris con
+"Esperando jugadores (1/2)" hasta que haya suficientes conectados. Cuando el servidor avisa que
+empezó, el panel pide ir a la arena, y cuando termina guarda las posiciones finales.
 """
 
 import asyncio
@@ -9,11 +10,14 @@ import asyncio
 import pygame
 
 from src.api_client import ApiError, iniciar_partida
+from src.config import MINIMO_JUGADORES
 from src.realtime_client import CanalPartida
 from src.screens.componentes import Boton
 
 COLOR_TEXTO = (255, 255, 255)
 COLOR_ERROR = (240, 100, 100)
+GRIS_BOTON = (70, 75, 90)
+GRIS_TEXTO = (170, 175, 190)
 
 ESTADOS = {
     "conectando": "conectando...",
@@ -36,6 +40,14 @@ class PanelCanal:
         self.quiere_arena = False
         self.boton_arena = Boton(pygame.Rect(0, 0, 260, 44), "Entrar a la arena")
         self.boton_iniciar = Boton(pygame.Rect(0, 0, 260, 44), "Iniciar partida")
+        # el mismo lugar que el de iniciar, pero en gris y sin acción mientras faltan jugadores
+        self.boton_esperando = Boton(
+            pygame.Rect(0, 0, 320, 44),
+            "",
+            color=GRIS_BOTON,
+            color_hover=GRIS_BOTON,
+            color_texto=GRIS_TEXTO,
+        )
         self._tarea: asyncio.Task | None = None
 
     async def abrir(self, partida_id: int, token: str, es_creador: bool = False) -> None:
@@ -82,6 +94,12 @@ class PanelCanal:
     def puede_iniciar(self) -> bool:
         return self.canal is not None and self.es_creador and self.estado_partida() == "esperando"
 
+    def cantidad_conectados(self) -> int:
+        return len(set(self.conectados))
+
+    def hay_jugadores_suficientes(self) -> bool:
+        return self.cantidad_conectados() >= MINIMO_JUGADORES
+
     def ocupado(self) -> bool:
         return self._tarea is not None and not self._tarea.done()
 
@@ -100,7 +118,10 @@ class PanelCanal:
         if self.boton_arena.fue_presionado(event):
             self.quiere_arena = True
         elif (
-            self.puede_iniciar() and not self.ocupado() and self.boton_iniciar.fue_presionado(event)
+            self.puede_iniciar()
+            and self.hay_jugadores_suficientes()
+            and not self.ocupado()
+            and self.boton_iniciar.fue_presionado(event)
         ):
             self._tarea = asyncio.create_task(self._iniciar())
 
@@ -121,8 +142,16 @@ class PanelCanal:
         self.boton_arena.rect.center = (centro_x, y + 50)
         self.boton_arena.draw(screen)
         if self.puede_iniciar():
-            self.boton_iniciar.rect.center = (centro_x, y + 105)
-            self.boton_iniciar.draw(screen)
+            if self.hay_jugadores_suficientes():
+                self.boton_iniciar.rect.center = (centro_x, y + 105)
+                self.boton_iniciar.draw(screen)
+            else:
+                conectados = min(self.cantidad_conectados(), MINIMO_JUGADORES)
+                self.boton_esperando.texto = (
+                    f"Esperando jugadores ({conectados}/{MINIMO_JUGADORES})"
+                )
+                self.boton_esperando.rect.center = (centro_x, y + 105)
+                self.boton_esperando.draw(screen)
         if self.error:
             aviso = self.fuente.render(self.error, True, COLOR_ERROR)
             screen.blit(aviso, aviso.get_rect(center=(centro_x, y + 150)))

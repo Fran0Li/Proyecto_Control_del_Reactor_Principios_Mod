@@ -31,7 +31,7 @@ def pygame_sin_ventana():
 
 @pytest.fixture
 def sin_sprites(monkeypatch):
-    """Sin la imagen del muro: las barreras se dibujan con su color de siempre."""
+    """Sin imágenes: los obstáculos se dibujan con sus colores de siempre."""
     monkeypatch.setattr(dibujo_obstaculos.sprites, "cargar", lambda *a, **k: None)
 
 
@@ -54,15 +54,15 @@ def test_la_barrera_es_gris(sin_sprites):
     assert color(pantalla_con([obstaculo("barrera")]), 130, 70) == GRIS
 
 
-def test_la_trampa_es_naranja():
+def test_la_trampa_es_naranja(sin_sprites):
     assert color(pantalla_con([obstaculo("trampa")]), 130, 70) == NARANJA
 
 
-def test_la_puerta_cerrada_es_marron_y_rellena():
+def test_la_puerta_cerrada_es_marron_y_rellena(sin_sprites):
     assert color(pantalla_con([obstaculo("puerta", abierta=False)]), 130, 70) == MARRON
 
 
-def test_la_puerta_abierta_solo_dibuja_el_contorno():
+def test_la_puerta_abierta_solo_dibuja_el_contorno(sin_sprites):
     pantalla = pantalla_con([obstaculo("puerta", abierta=True)])
     assert color(pantalla, 100, 70) == VERDE  # el borde
     assert color(pantalla, 130, 70) == BLANCO  # el centro queda libre
@@ -95,7 +95,7 @@ def test_sin_obstaculos_no_falla():
     assert color(pantalla_con([]), 130, 70) == BLANCO
 
 
-# --- con el sprite del muro ---------------------------------------------------------------------
+# con el sprite del muro
 
 
 def pixel_del_muro(dx, dy):
@@ -127,6 +127,82 @@ def test_la_barrera_movil_lleva_el_muro_y_su_borde():
     assert color(pantalla, 100 + dx, 50 + dy) == pixel_del_muro(dx, dy)
 
 
-def test_la_trampa_y_la_puerta_no_cambian_con_el_muro():
-    assert color(pantalla_con([obstaculo("trampa")]), 130, 70) == NARANJA
+# con el sprite de la trampa
+
+
+def test_la_trampa_se_rellena_con_su_sprite_en_cuadros_de_30():
+    trampa = sprites.cargar("trampa", (30, 30))
+    dx, dy = next((x, y) for y in range(30) for x in range(30) if trampa.get_at((x, y)).a == 255)
+    esperado = tuple(trampa.get_at((dx, dy)))[:3]
+    pantalla = pantalla_con([obstaculo("trampa")])  # 60 x 40 en (100, 50)
+    assert color(pantalla, 100 + dx, 50 + dy) == esperado
+    assert color(pantalla, 130 + dx, 50 + dy) == esperado  # segundo cuadro
+    assert color(pantalla, 99, 70) == BLANCO and color(pantalla, 160, 70) == BLANCO
+
+
+def test_la_trampa_no_tapa_el_suelo_donde_el_sprite_es_transparente():
+    trampa = sprites.cargar("trampa", (30, 30))
+    transparente = [(x, y) for y in range(30) for x in range(30) if trampa.get_at((x, y)).a == 0]
+    if not transparente:
+        pytest.skip("el sprite de la trampa no tiene huecos")
+    dx, dy = transparente[0]
+    assert color(pantalla_con([obstaculo("trampa")]), 100 + dx, 50 + dy) == BLANCO
+
+
+# con el sprite de la puerta (muro intermitente)
+
+
+def sprite_de_puerta():
+    return sprites.cargar("muro_intermitente", (30, 30))
+
+
+def punto_opaco_de_puerta():
+    puerta = sprite_de_puerta()
+    return next((x, y) for y in range(30) for x in range(30) if puerta.get_at((x, y)).a == 255)
+
+
+def test_la_puerta_cerrada_lleva_el_sprite_normal():
+    dx, dy = punto_opaco_de_puerta()
+    pantalla = pantalla_con([obstaculo("puerta", abierta=False)])
+    assert color(pantalla, 100 + dx, 50 + dy) == tuple(sprite_de_puerta().get_at((dx, dy)))[:3]
+
+
+def test_la_puerta_abierta_es_el_mismo_sprite_pero_mas_oscuro():
+    dx, dy = punto_opaco_de_puerta()
+    cerrada = color(pantalla_con([obstaculo("puerta", abierta=False)]), 100 + dx, 50 + dy)
+    abierta = color(pantalla_con([obstaculo("puerta", abierta=True)]), 100 + dx, 50 + dy)
+    assert sum(abierta) < sum(cerrada)
+    assert abierta != BLANCO
+
+
+def test_la_puerta_abierta_sigue_ocupando_el_mismo_rectangulo():
+    pantalla = pantalla_con([obstaculo("puerta", abierta=True)])
+    assert color(pantalla, 99, 70) == BLANCO and color(pantalla, 160, 70) == BLANCO
+    assert color(pantalla, 130, 90) == BLANCO
+
+
+def test_al_abrir_y_cerrar_el_dibujo_cambia_cada_vez():
+    dx, dy = punto_opaco_de_puerta()
+    punto = (100 + dx, 50 + dy)
+    estados = [
+        color(pantalla_con([obstaculo("puerta", abierta=a)]), *punto) for a in (False, True, False)
+    ]
+    assert estados[0] == estados[2] != estados[1]
+
+
+def test_el_sprite_original_de_la_puerta_no_se_oscurece_para_siempre():
+    dx, dy = punto_opaco_de_puerta()
+    antes = tuple(sprite_de_puerta().get_at((dx, dy)))
+    pantalla_con([obstaculo("puerta", abierta=True)])
+    assert tuple(sprite_de_puerta().get_at((dx, dy))) == antes
+
+
+def test_estan_las_imagenes_de_la_trampa_y_la_puerta():
+    for nombre in ("trampa", "muro_intermitente"):
+        assert (sprites.CARPETA / f"{nombre}.png").exists(), f"falta {nombre}.png"
+        assert sprites.cargar(nombre, (30, 30)) is not None
+
+
+def test_sin_imagen_la_puerta_vuelve_a_sus_colores(sin_sprites):
     assert color(pantalla_con([obstaculo("puerta", abierta=False)]), 130, 70) == MARRON
+    assert color(pantalla_con([obstaculo("puerta", abierta=True)]), 100, 70) == VERDE

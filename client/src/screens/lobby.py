@@ -7,6 +7,7 @@ import pygame
 from src import sesion
 from src.api_client import ApiError, crear_partida
 from src.screens.componentes import Boton, boton_secundario
+from src.screens.dibujo_fondo import dibujar_fondo_menu
 from src.screens.panel_canal import PanelCanal
 
 COLOR_FONDO = (12, 16, 32)
@@ -76,7 +77,7 @@ class LobbyScreen:
         self.panel.cerrar()
 
     def draw(self, screen: pygame.Surface) -> None:
-        screen.fill(COLOR_FONDO)
+        dibujar_fondo_menu(screen, COLOR_FONDO)
 
         titulo = self.fuente_titulo.render("LOBBY", True, COLOR_TITULO)
         screen.blit(titulo, titulo.get_rect(center=(self.centro_x, 140)))

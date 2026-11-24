@@ -315,6 +315,16 @@ class MotorPartida:
             if (x, y) != (jugador.x, jugador.y):
                 jugador.x, jugador.y = x, y
                 self._hay_cambios = True
+    def _empujar_jugadores(self) -> None:
+        """Una barrera móvil empuja a quien tenga encima, esté quieto, aturdido o caminando."""
+        radio = self.arena.radio_jugador
+        for jugador in self._jugadores.values():
+            x, y = self._obstaculos.empujar(jugador.x, jugador.y)
+            x = min(max(x, radio), self.arena.ancho - radio)
+            y = min(max(y, radio), self.arena.alto - radio)
+            if (x, y) != (jugador.x, jugador.y):
+                jugador.x, jugador.y = x, y
+                self._hay_cambios = True
 
     def _actualizar_celdas(self) -> None:
         """Repone las celdas que ya les toca y da cada celda tocada a su jugador."""
@@ -400,6 +410,7 @@ class MotorPartida:
                     self._hay_cambios = True
             if self._obstaculos.actualizar(CICLO_S):
                 self._hay_cambios = True  # una puerta se abrió o se cerró
+            self._empujar_jugadores()
             self._mover(CICLO_S)
             self._actualizar_guardianes(CICLO_S)
             self._actualizar_celdas()

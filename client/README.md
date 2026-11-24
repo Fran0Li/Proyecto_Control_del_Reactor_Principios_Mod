@@ -114,10 +114,12 @@ cuenta el antirrebote del firmware (20 ms), el USB ni el dibujo del cuadro; el r
 - **Librerías solo de escritorio** (`requests`, `pyserial`): importarlas dentro de la función que las
   usa, como en `src/red/http.py`.
 
-## Pendiente para el Sprint 3
+## Escribir desde el celular
 
-- En el celular los campos de texto no abren el teclado del teléfono: hay que agregar un teclado en
-  pantalla o un campo HTML para el login y el registro desde el móvil.
+El canvas de pygame no abre el teclado del teléfono. En pantallas táctiles, tocar un campo de texto
+abre el cuadro de texto del navegador (`window.prompt`), que sí lo abre; lo escrito pasa al campo
+(`src/navegador.py`, `pedir_texto`). En la compu, también en el navegador, se escribe como siempre.
+Limitación: en ese cuadro la contraseña se ve mientras se escribe; en el juego queda con asteriscos.
 
 ## Pruebas
 

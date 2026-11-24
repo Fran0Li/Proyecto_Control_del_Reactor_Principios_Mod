@@ -49,6 +49,8 @@ class PanelCanal:
             color_texto=GRIS_TEXTO,
         )
         self._tarea: asyncio.Task | None = None
+        # Último seq de entrada enviado por este canal (el servidor los cuenta por conexión)
+        self.seq_enviada = 0
 
     async def abrir(self, partida_id: int, token: str, es_creador: bool = False) -> None:
         self.cerrar()
@@ -56,6 +58,7 @@ class PanelCanal:
         self.token = token
         self.es_creador = es_creador
         self.conectados = []
+        self.seq_enviada = 0  # conexión nueva: el servidor empieza a contar de cero
         self.resultado = None
         self.error = ""
         self.canal = CanalPartida(partida_id, token)

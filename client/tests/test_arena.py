@@ -373,3 +373,28 @@ def test_si_empieza_la_partida_estando_en_practica_el_boton_desaparece():
     con_partida(panel, "en_curso")
 
     assert not arena.en_practica()
+
+
+# volver a la arena con el mismo canal
+
+
+def test_al_volver_a_la_arena_con_el_mismo_canal_el_seq_sigue_contando():
+    """El servidor descarta los seq que no crecen en la misma conexión: si al volver de la
+    práctica se empezara otra vez en 1, el personaje no se movería."""
+    panel = PanelFalso([(1, 240, 135)])
+    panel.seq_enviada = 0
+    arena = arena_con(panel)
+    for _ in range(3):
+        arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_d))
+        arena.update()
+        arena.handle_event(tecla(pygame.KEYUP, pygame.K_d))
+        arena.update()
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_ESCAPE))
+    assert panel.seq_enviada == 6
+
+    arena.preparar(panel, "lobby")
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_d))
+    arena.update()
+
+    con_seq = [m["seq"] for m in panel.canal.enviados if "seq" in m]
+    assert con_seq == [1, 2, 3, 4, 5, 6, 7]

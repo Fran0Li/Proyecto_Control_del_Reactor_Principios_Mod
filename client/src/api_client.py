@@ -3,6 +3,7 @@
 Todas las funciones son `async`: se usan con `await` desde una tarea (ver las pantallas), así la
 ventana no se congela mientras responde el servidor y el mismo código corre en el navegador.
 """
+
 from typing import Any
 
 from src.config import SERVER_URL
@@ -101,6 +102,7 @@ async def crear_partida(token: str, escenario: str | None = None) -> dict:
     return await _enviar("POST", "/partidas", {"escenario": escenario}, token=token)
 
 
+
 async def listar_partidas_disponibles() -> list[dict]:
     datos = await _enviar("GET", "/partidas")
     return datos if isinstance(datos, list) else []
@@ -114,6 +116,7 @@ async def unirse_a_partida(partida_id: int, token: str) -> dict:
 async def iniciar_partida(partida_id: int, token: str) -> dict:
     """Solo el creador puede iniciarla (US-17); el servidor avisa a todos por el canal."""
     return await _enviar("POST", f"/partidas/{partida_id}/iniciar", token=token)
+
 
 async def obtener_resultado(partida_id: int, token: str) -> dict:
     """Podio y estadísticas de una partida terminada (US-18). Da 409 mientras se guarda."""

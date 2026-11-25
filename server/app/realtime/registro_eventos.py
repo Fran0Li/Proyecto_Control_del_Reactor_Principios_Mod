@@ -1,8 +1,9 @@
 """Observador que guarda en la tabla `eventos` lo importante de cada partida (US-17).
 
 No guarda `estado_actualizado` (llega cada 50 ms y no aporta al historial): solo el inicio, las
-acciones, las penalizaciones y el final. Con esto el historial y la ceremonia pueden contar, por
-ejemplo, cuántas veces extrajo energía cada jugador.
+acciones, las penalizaciones, los retos cumplidos (US-27) y el final. Con esto el historial y la
+ceremonia pueden contar, por ejemplo, cuántas veces extrajo energía cada jugador. También
+guarda cuándo empezó y terminó cada evento especial (US-16).
 """
 
 import asyncio
@@ -10,14 +11,25 @@ import asyncio
 from app.realtime.evaluador_logros import FabricaSesiones
 from app.realtime.eventos import (
     ACCION_REALIZADA,
+    EVENTO_ESPECIAL_FINALIZADO,
+    EVENTO_ESPECIAL_INICIADO,
     JUGADOR_PENALIZADO,
     PARTIDA_FINALIZADA,
     PARTIDA_INICIADA,
+    RETO_COMPLETADO,
     EventoPartida,
 )
 from app.repositories import EventoRepository
 
-TIPOS_GUARDADOS = (PARTIDA_INICIADA, ACCION_REALIZADA, JUGADOR_PENALIZADO, PARTIDA_FINALIZADA)
+TIPOS_GUARDADOS = (
+    PARTIDA_INICIADA,
+    ACCION_REALIZADA,
+    JUGADOR_PENALIZADO,
+    RETO_COMPLETADO,  # US-27
+    EVENTO_ESPECIAL_INICIADO,  # US-16
+    EVENTO_ESPECIAL_FINALIZADO,
+    PARTIDA_FINALIZADA,
+)
 
 
 class RegistroEventos:

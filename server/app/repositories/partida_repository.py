@@ -36,6 +36,27 @@ class PartidaRepository:
         self.db.refresh(partida)
         return partida
 
+    def cerrar_si_sigue_esperando(self, partida_id: int) -> bool:
+        """Cierra una partida que nunca se inició (todos se fueron del lobby). True si la cerró."""
+        partida = self.obtener_por_id(partida_id)
+        if partida is None or partida.estado != EstadoPartida.esperando:
+            return False
+        self.cambiar_estado(partida, EstadoPartida.finalizada)
+        return True
+
+    def cerrar_activas(self) -> int:
+        """Cierra todas las partidas en espera o en curso. Los motores viven en memoria: al
+        arrancar el servidor ninguna puede seguir, y si quedaran activas, sus jugadores no
+        podrían crear ni unirse a otra (RN-04). Devuelve cuántas cerró."""
+        activas = self.db.scalars(select(Partida).where(Partida.estado.in_(ESTADOS_ACTIVOS)))
+        cerradas = 0
+        for partida in list(activas):
+            partida.estado = EstadoPartida.finalizada
+            partida.fecha_fin = datetime.now(UTC)
+            cerradas += 1
+        self.db.commit()
+        return cerradas
+
     def guardar_resultado(self, partida: Partida, posiciones: dict[int, tuple[int, int]]) -> None:
         """Cierra la partida. `posiciones`: jugador_id -> (puntaje final, posición final)."""
         for participacion in self.listar_participaciones(partida.id):

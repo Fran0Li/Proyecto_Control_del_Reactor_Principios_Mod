@@ -119,7 +119,7 @@ async def iniciar_partida(partida_id: int, usuario: UsuarioActual, db: SessionDe
     except (PartidaNoDisponibleError, FaltanJugadoresError) as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
 
-    motor = gestor_motores.obtener(partida_id)
+    motor = gestor_motores.obtener(partida_id, partida.escenario)
     motor.iniciar_partida(partida.tiempo_limite_segundos, partida.puntuacion_objetivo)
     return partida
 

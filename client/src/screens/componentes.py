@@ -1,10 +1,32 @@
 """Componentes de interfaz reutilizables entre pantallas."""
 
-from collections.abc import Callable
-
 import pygame
 
-from src.navegador import es_pantalla_tactil, pedir_texto
+from src import navegador
+
+# Toques en el celular. Android manda el dedo (FINGERDOWN) y además un clic de mouse inventado a
+# partir de él; el iPhone (Safari) solo manda el dedo. Por eso los botones y campos aceptan las dos
+# cosas, y una vez que se vio un dedo se ignoran los clics de mouse para no presionar dos veces.
+_dedos_vistos = False
+
+
+def reiniciar_toques() -> None:
+    """Olvida si ya se vieron dedos (lo usan las pruebas)."""
+    global _dedos_vistos
+    _dedos_vistos = False
+
+
+def punto_presionado(event: pygame.event.Event) -> tuple[float, float] | None:
+    """Dónde se presionó, en píxeles de la ventana, o None si el evento no es una presión."""
+    global _dedos_vistos
+    if event.type == pygame.FINGERDOWN:
+        _dedos_vistos = True
+        superficie = pygame.display.get_surface()
+        ancho, alto = superficie.get_size() if superficie is not None else (1, 1)
+        return event.x * ancho, event.y * alto  # los dedos vienen normalizados de 0 a 1
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not _dedos_vistos:
+        return event.pos
+    return None
 
 COLOR_CAMPO = (24, 32, 56)
 COLOR_BORDE = (60, 80, 120)
@@ -29,27 +51,26 @@ class CampoTexto:
         self.activo = False
         self.fuente = pygame.font.Font(None, 30)
         self.fuente_etiqueta = pygame.font.Font(None, 24)
-        # en el celular el teclado no sale solo: al tocar el campo se pide el texto al navegador
-        self.pedir_texto: Callable[[str, str], str | None] | None = (
-            pedir_texto if es_pantalla_tactil() else None
-        )
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.activo = self.rect.collidepoint(event.pos)
-            if self.activo and self.pedir_texto is not None:
-                self._escribir_con_el_teclado_del_celular()
+        punto = punto_presionado(event)
+        if punto is not None:
+            self.activo = self.rect.collidepoint(punto)
+            if self.activo:
+                self._pedir_en_celular()
         elif event.type == pygame.KEYDOWN and self.activo:
             if event.key == pygame.K_BACKSPACE:
                 self.texto = self.texto[:-1]
             elif event.unicode.isprintable() and len(self.texto) < self.largo_maximo:
                 self.texto += event.unicode
 
-    def _escribir_con_el_teclado_del_celular(self) -> None:
-        actual = "" if self.oculto else self.texto  # la contraseña no se muestra en el cuadro
-        nuevo = self.pedir_texto(self.etiqueta, actual)
-        if nuevo is not None:  # None: el jugador canceló y queda lo que había
-            self.texto = nuevo.strip("\n")[: self.largo_maximo]
+    def _pedir_en_celular(self) -> None:
+        """En el celular, tocar el campo abre el cuadro de texto del navegador con el teclado."""
+        valor = navegador.pedir_texto(self.etiqueta, "" if self.oculto else self.texto)
+        if valor is None:
+            return
+        limpio = "".join(c for c in valor if c.isprintable())
+        self.texto = limpio[: self.largo_maximo]
 
     def draw(self, screen: pygame.Surface) -> None:
         etiqueta = self.fuente_etiqueta.render(self.etiqueta, True, COLOR_ETIQUETA)
@@ -88,8 +109,8 @@ class Boton:
         self.fuente = pygame.font.Font(None, 32)
 
     def fue_presionado(self, event: pygame.event.Event) -> bool:
-        clic_izquierdo = event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-        return clic_izquierdo and self.rect.collidepoint(event.pos)
+        punto = punto_presionado(event)
+        return punto is not None and self.rect.collidepoint(punto)
 
     def draw(self, screen: pygame.Surface) -> None:
         hover = self.rect.collidepoint(pygame.mouse.get_pos())

@@ -73,6 +73,12 @@ class PartidaService:
             raise PartidaLlenaError(f"La partida {partida_id} está llena")
         self.repo.agregar_participante(partida_id, jugador_id)
         return partida, self.repo.contar_participantes(partida_id)
+
+    def escenario_de(self, partida_id: int) -> str | None:
+        """El escenario de la partida, o None si no existe."""
+        partida = self.repo.obtener_por_id(partida_id)
+        return partida.escenario if partida is not None else None
+
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         return self.repo.es_participante(partida_id, jugador_id)
 

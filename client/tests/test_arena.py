@@ -7,7 +7,7 @@ import pygame
 import pytest
 
 from src.screens import panel_canal
-from src.screens.arena import BLANCO, ROJO, SUAVIZADO, ArenaScreen
+from src.screens.arena import BLANCO, ROJO, SALTO_PX, SUAVIZADO, ArenaScreen
 from src.screens.panel_canal import PanelCanal
 
 ANCHO, ALTO = 960, 640
@@ -68,7 +68,7 @@ def tecla(tipo, clave):
     return pygame.event.Event(tipo, key=clave)
 
 
-# dibujo 
+# dibujo
 
 
 def test_el_fondo_es_blanco():
@@ -81,14 +81,15 @@ def test_el_fondo_es_blanco():
     assert tuple(pantalla.get_at((480, 300)))[:3] == BLANCO
 
 
-def test_dibuja_un_circulo_rojo_por_jugador_en_su_posicion():
+def test_dibuja_a_cada_jugador_en_su_posicion():
     arena = arena_con(PanelFalso([(1, 240, 135), (2, 720, 135)]))
     arena.update()
 
     pantalla = dibujar(arena)
 
-    assert tuple(pantalla.get_at((240, 135)))[:3] == ROJO
-    assert tuple(pantalla.get_at((720, 135)))[:3] == ROJO
+    # en el centro va el personaje (sprite) y alrededor el aro de color
+    assert tuple(pantalla.get_at((240, 135)))[:3] != BLANCO
+    assert tuple(pantalla.get_at((720, 135)))[:3] != BLANCO
 
 
 def test_el_circulo_tiene_el_radio_que_manda_el_servidor():
@@ -138,6 +139,19 @@ def test_la_primera_vez_aparece_en_su_lugar_y_despues_se_acerca_sin_saltar():
     for _ in range(40):
         arena.update()
     assert arena.visuales[1][0] == pytest.approx(300, abs=0.01)
+
+
+def test_si_lo_mandan_lejos_aparece_alla_de_una_vez():
+    """Al iniciar la partida el servidor manda a todos a su punto de inicio: no se desliza."""
+    panel = PanelFalso([(1, 700, 400)])
+    arena = arena_con(panel)
+    arena.update()
+
+    panel.estado = estado_con([(1, 240, 135)])
+    arena.update()
+
+    assert arena.visuales[1] == [240.0, 135.0]
+    assert SALTO_PX > 20  # caminar (~6 px por estado) sigue siendo suave
 
 
 def test_quien_se_va_deja_de_dibujarse():
@@ -227,7 +241,7 @@ def test_sin_canal_escape_tambien_funciona():
     assert arena.siguiente_pantalla == "lobby"
 
 
-# panel del canal: estado y botón de la arena 
+# panel del canal: estado y botón de la arena
 
 
 class CanalDelPanel:
@@ -304,3 +318,107 @@ def test_el_panel_puede_dibujarse_sin_el_boton(monkeypatch):
     panel.draw(superficie, ANCHO // 2, 460, con_boton=False)
 
     assert panel.boton_arena.rect == antes  # no lo movió ni lo dibujó
+
+
+# volver al lobby desde la práctica
+
+
+def con_partida(panel, estado_partida):
+    panel.estado["partida"] = {"estado": estado_partida}
+    return panel
+
+
+def toque_en(rect, ancho=ANCHO, alto=ALTO):
+    x, y = rect.center
+    return pygame.event.Event(pygame.FINGERDOWN, x=x / ancho, y=y / alto, finger_id=0)
+
+
+def test_en_practica_hay_un_boton_para_volver_al_lobby():
+    arena = arena_con(con_partida(PanelFalso([(1, 600, 300)]), "esperando"))
+    superficie = dibujar(arena)
+
+    assert arena.en_practica()
+    assert superficie.get_at(arena.boton_volver.rect.center)[:3] != BLANCO
+
+    arena.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=arena.boton_volver.rect.center, button=1)
+    )
+
+    assert arena.siguiente_pantalla == "lobby" and not arena.activa
+
+
+def test_en_el_celular_el_dedo_tambien_vuelve_al_lobby():
+    arena = arena_con(con_partida(PanelFalso([(1, 600, 300)]), "esperando"), volver_a="buscar")
+
+    arena.handle_event(toque_en(arena.boton_volver.rect))
+
+    assert arena.siguiente_pantalla == "buscar"
+
+
+def test_con_la_partida_en_curso_no_hay_boton_y_tocar_ahi_no_saca_a_nadie():
+    arena = arena_con(con_partida(PanelFalso([(1, 600, 300)]), "en_curso"))
+    superficie = dibujar(arena)
+
+    assert not arena.en_practica()
+    assert superficie.get_at(arena.boton_volver.rect.center)[:3] == BLANCO
+    arena.handle_event(toque_en(arena.boton_volver.rect))
+    assert arena.activa and arena.siguiente_pantalla is None
+
+
+def test_si_empieza_la_partida_estando_en_practica_el_boton_desaparece():
+    panel = con_partida(PanelFalso([(1, 600, 300)]), "esperando")
+    arena = arena_con(panel)
+    assert arena.en_practica()
+
+    con_partida(panel, "en_curso")
+
+    assert not arena.en_practica()
+
+
+# volver a la arena con el mismo canal
+
+
+def test_al_volver_a_la_arena_con_el_mismo_canal_el_seq_sigue_contando():
+    """El servidor descarta los seq que no crecen en la misma conexión: si al volver de la
+    práctica se empezara otra vez en 1, el personaje no se movería."""
+    panel = PanelFalso([(1, 240, 135)])
+    panel.seq_enviada = 0
+    arena = arena_con(panel)
+    for _ in range(3):
+        arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_d))
+        arena.update()
+        arena.handle_event(tecla(pygame.KEYUP, pygame.K_d))
+        arena.update()
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_ESCAPE))
+    assert panel.seq_enviada == 6
+
+    arena.preparar(panel, "lobby")
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_d))
+    arena.update()
+
+    con_seq = [m["seq"] for m in panel.canal.enviados if "seq" in m]
+    assert con_seq == [1, 2, 3, 4, 5, 6, 7]
+
+
+# sonidos (US-29)
+
+
+def test_la_arena_toca_los_sonidos_que_detecta_y_m_silencia(monkeypatch):
+    from src.screens import arena as modulo_arena
+
+    tocados = []
+    silencios = []
+    monkeypatch.setattr(modulo_arena.sonidos, "reproducir", tocados.append)
+    monkeypatch.setattr(modulo_arena.sonidos, "alternar_silencio", lambda: silencios.append(1))
+    monkeypatch.setattr(modulo_arena.sesion, "jugador_id", lambda: 1)
+    panel = PanelFalso([(1, 240, 135)])
+    arena = arena_con(panel)
+    arena.update()
+
+    panel.estado = estado_con([(1, 240, 135)])
+    panel.estado["jugadores"][0]["estado"] = "aturdido"
+    arena.update()
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_m))
+
+    assert tocados == ["golpe"]
+    assert silencios == [1]

@@ -114,10 +114,38 @@ cuenta el antirrebote del firmware (20 ms), el USB ni el dibujo del cuadro; el r
 - **Librerías solo de escritorio** (`requests`, `pyserial`): importarlas dentro de la función que las
   usa, como en `src/red/http.py`.
 
-## Pendiente para el Sprint 3
+## Escribir desde el celular
 
-- En el celular los campos de texto no abren el teclado del teléfono: hay que agregar un teclado en
-  pantalla o un campo HTML para el login y el registro desde el móvil.
+El canvas de pygame no abre el teclado del teléfono. En pantallas táctiles, tocar un campo de texto
+abre el cuadro de texto del navegador (`window.prompt`), que sí lo abre; lo escrito pasa al campo
+(`src/navegador.py`, `pedir_texto`). En la compu, también en el navegador, se escribe como siempre.
+Limitación: en ese cuadro la contraseña se ve mientras se escribe; en el juego queda con asteriscos.
+
+## Sonidos (US-29)
+
+En la arena suena la música de la partida en bucle (`assets/audio/musica_partida.ogg`) y efectos
+generados en código (`src/sonidos.py`): extraer del reactor, recoger una bolita de energía, el
+golpe de un guardián (a cualquier jugador) y el inicio de un evento especial. `DetectorSonidos`
+los decide comparando cada estado del servidor con el anterior, sin cambios en el servidor. La
+tecla **M** silencia todo. Sin audio disponible el juego sigue igual. Detalles en
+`assets/audio/README.md`.
+
+## Toques: Android e iPhone
+
+Los botones y campos (`Boton`, `CampoTexto`) aceptan el dedo (`FINGERDOWN`) y el clic de mouse.
+Safari del iPhone solo manda el dedo; Android manda el dedo y después un clic inventado a partir de
+él, así que una vez que se vio un dedo se ignoran los clics para no presionar dos veces
+(`componentes.punto_presionado`).
+
+## Pantalla completa en el celular
+
+En Chrome de Android, el primer toque pone el juego en pantalla completa y horizontal
+(`navegador.al_tocar`, desde `main.py`); si el jugador sale, el siguiente toque la vuelve a pedir.
+Safari del iPhone no permite pantalla completa en páginas, así que ahí se ve como antes.
+
+Antes de que el creador inicie la partida, la arena es de práctica (no cuenta) y muestra el botón
+"Volver al lobby", porque en el celular no hay Esc. Si la partida empieza mientras alguien está en
+práctica, el servidor lo manda a su punto de inicio con 0 puntos y el reloj arranca.
 
 ## Pruebas
 

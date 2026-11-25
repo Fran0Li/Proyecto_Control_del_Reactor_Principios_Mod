@@ -32,6 +32,9 @@ def _servidor_por_defecto() -> str:
 
 SERVER_URL = os.getenv("SERVER_URL") or _servidor_por_defecto()
 WINDOW_SIZE = (960, 640)
+# Jugadores conectados que se necesitan para que el botón "Iniciar partida" se active. Debe
+# coincidir con PARTIDA_MINIMO_JUGADORES del servidor, que es quien valida de verdad.
+MINIMO_JUGADORES = int(os.getenv("MINIMO_JUGADORES") or 2)
 FPS = 60
 # Control físico en escritorio: puerto del Arduino (COM3, /dev/ttyUSB0) o del simulador
 # (socket://localhost:7777). Sin definir, se juega solo con el teclado.

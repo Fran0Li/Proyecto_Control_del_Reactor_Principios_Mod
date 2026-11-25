@@ -1,4 +1,5 @@
-"""Pruebas de los obstáculos (US-14): barrera, trampa y puerta. Sin red ni base de datos."""
+"""Pruebas de los obstáculos (US-14): barrera, trampa, puerta y barrera móvil. Sin red ni base
+de datos."""
 
 import asyncio
 
@@ -8,10 +9,14 @@ from app.realtime.arena import Arena, Obstaculo, Reactor
 from app.realtime.eventos import ESTADO_ACTUALIZADO
 from app.realtime.motor_partida import CICLO_S, VELOCIDAD, MotorPartida
 from app.realtime.obstaculos import (
+    BARRERA_MOVIL,
     FACTOR_TRAMPA,
     PUERTA_ABIERTA_S,
     PUERTA_CERRADA_S,
+    VELOCIDAD_BARRERA_MOVIL,
     GestorObstaculos,
+    posicion_en,
+    sacar,
     toca,
 )
 
@@ -199,3 +204,155 @@ class TestSinObstaculos:
         avanzar(motor, 10)
         assert posicion(motor)[0] == pytest.approx(240 + VELOCIDAD * 10 * CICLO_S, abs=1)
         assert motor.estado()["arena"]["obstaculos"] == []
+
+
+def barrera_movil(x=100, y=0, destino_x=200, destino_y=0, ancho=20, alto=60):
+    return Obstaculo(x, y, ancho, alto, BARRERA_MOVIL, destino_x, destino_y)
+
+
+class TestBarreraMovil:
+    def test_empieza_en_su_punto_inicial(self):
+        movil = barrera_movil()
+        assert posicion_en(movil, 0, 30) == movil
+
+    def test_avanza_hacia_el_destino_a_su_velocidad(self):
+        movil = posicion_en(barrera_movil(), 2.0, 30)  # 2 s a 30 px/s: 60 px
+        assert (movil.x, movil.y) == pytest.approx((160, 0))
+
+    def test_en_el_destino_da_la_vuelta(self):
+        tiempo_de_ida = 100 / 30
+        en_destino = posicion_en(barrera_movil(), tiempo_de_ida, 30)
+        assert (en_destino.x, en_destino.y) == pytest.approx((200, 0))
+        de_vuelta = posicion_en(barrera_movil(), tiempo_de_ida + 1.0, 30)
+        assert (de_vuelta.x, de_vuelta.y) == pytest.approx((170, 0))
+
+    def test_completa_el_ciclo_y_vuelve_al_inicio(self):
+        ciclo = 2 * 100 / 30
+        movil = posicion_en(barrera_movil(), ciclo, 30)
+        assert (movil.x, movil.y) == pytest.approx((100, 0))
+
+    def test_nunca_sale_del_recorrido(self):
+        for decima in range(0, 1000):
+            movil = posicion_en(barrera_movil(), decima / 10, 30)
+            assert 100 - 1e-6 <= movil.x <= 200 + 1e-6
+
+    def test_puede_moverse_en_diagonal(self):
+        movil = posicion_en(barrera_movil(0, 0, 30, 40), 1.0, 25)  # recorrido de 50 px
+        assert (movil.x, movil.y) == pytest.approx((15, 20))
+
+    def test_sin_destino_o_sin_recorrido_se_queda_quieta(self):
+        sin_destino = Obstaculo(10, 10, 20, 20, BARRERA_MOVIL)
+        sin_recorrido = barrera_movil(10, 10, 10, 10)
+        assert posicion_en(sin_destino, 5, 30) == sin_destino
+        assert posicion_en(sin_recorrido, 5, 30) == sin_recorrido
+
+    def test_los_otros_obstaculos_no_se_mueven(self):
+        for tipo in ("barrera", "trampa", "puerta"):
+            fijo = Obstaculo(10, 10, 20, 20, tipo, 100, 100)
+            assert posicion_en(fijo, 5, 30) == fijo
+
+    def test_bloquea_el_paso_donde_esta_ahora(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        assert gestor.mover(60, 100, 90, 100) == (60, 100)  # la barrera está en x = 100..120
+        gestor.actualizar(100 / VELOCIDAD_BARRERA_MOVIL)  # llega a x = 200..220
+        assert gestor.mover(60, 100, 90, 100) == (90, 100)  # ya no está en el camino
+        assert gestor.mover(160, 100, 190, 100) == (160, 100)  # ahora bloquea más adelante
+
+    def test_actualizar_avisa_que_hubo_cambio_en_cada_ciclo(self):
+        gestor = GestorObstaculos([barrera_movil()], RADIO)
+        assert gestor.actualizar(CICLO_S) is True
+        assert gestor.actualizar(CICLO_S) is True
+
+    def test_el_estado_trae_la_posicion_actual(self):
+        gestor = GestorObstaculos([barrera_movil()], RADIO)
+        gestor.actualizar(2.0)
+        dato = gestor.a_dicts()[0]
+        assert dato["tipo"] == BARRERA_MOVIL
+        assert dato["x"] == 160
+
+    def test_el_motor_la_mueve_y_avisa_a_los_clientes(self):
+        motor = motor_con([barrera_movil(100, 0, 200, 0, alto=200)])
+        observador = ObservadorFalso()
+        motor.suscribir(observador)
+        inicio = motor.estado()["arena"]["obstaculos"][0]["x"]
+        avanzar(motor, ticks_para(1.0))
+        estados = [e.datos for e in observador.eventos if e.tipo == ESTADO_ACTUALIZADO]
+        assert estados
+        assert estados[-1]["arena"]["obstaculos"][0]["x"] > inicio
+
+    def test_el_jugador_choca_con_ella_en_el_motor(self):
+        # Barrera quieta frente al jugador (50, 100): no lo deja pasar
+        motor = motor_con([barrera_movil(100, 0, 100, 1, alto=200)])
+        motor.aplicar_entrada(1, "derecha", "presionado")
+        avanzar(motor, ticks_para(2.0))
+        assert posicion(motor)[0] < 100 - RADIO + 1
+
+
+class TestEmpujeDeLaBarreraMovil:
+    """La barrera móvil nunca atraviesa al jugador: lo empuja o lo bloquea."""
+
+    def test_sacar_deja_al_circulo_libre_por_el_lado_mas_cercano(self):
+        barrera = Obstaculo(100, 0, 20, 200, "barrera")
+        x, y = sacar(110, 100, RADIO, barrera)  # el centro quedó adentro, más cerca de la izquierda
+        assert x == pytest.approx(100 - RADIO)
+        assert not toca(x, y, RADIO - 0.001, barrera)
+
+    def test_sacar_no_mueve_a_quien_no_toca(self):
+        barrera = Obstaculo(100, 0, 20, 200, "barrera")
+        assert sacar(10, 100, RADIO, barrera) == (10, 100)
+
+    def test_sacar_desde_una_esquina_se_aleja_en_diagonal(self):
+        barrera = Obstaculo(100, 100, 20, 20, "barrera")
+        x, y = sacar(95, 95, RADIO, barrera)
+        assert x < 95 and y < 95
+        assert not toca(x, y, RADIO - 0.001, barrera)
+
+    def test_empuja_a_un_jugador_quieto(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        x = 150.0  # la barrera sube desde x = 100 hasta pasar por donde está el jugador
+        for _ in range(ticks_para(5.0)):
+            gestor.actualizar(CICLO_S)
+            x, _ = gestor.empujar(x, 100)
+            assert not any(
+                toca(x, 100, RADIO, o) for o in gestor._actuales if o.tipo == BARRERA_MOVIL
+            )
+        assert x > 150  # lo fue empujando hacia adelante
+
+    def test_no_toca_a_los_que_ya_estan_libres(self):
+        gestor = GestorObstaculos([barrera_movil(100, 0, 200, 0, alto=200)], RADIO)
+        assert gestor.empujar(10, 100) == (10, 100)
+
+    def test_las_puertas_y_barreras_fijas_no_empujan(self):
+        fijas = [Obstaculo(90, 0, 40, 200, "barrera"), Obstaculo(90, 0, 40, 200, "puerta")]
+        gestor = GestorObstaculos(fijas, RADIO)
+        assert gestor.empujar(110, 100) == (110, 100)
+
+    def test_en_el_motor_la_barrera_empuja_al_jugador_quieto(self):
+        # el jugador espera en x = 150 y la barrera viene desde x = 100 hacia 400
+        motor = motor_con([barrera_movil(100, 0, 380, 0, alto=200)], inicio=(150, 100))
+        for _ in range(ticks_para(6.0)):
+            avanzar(motor, 1)
+            x, y = posicion(motor)
+            barrera = motor.estado()["arena"]["obstaculos"][0]
+            assert not toca(
+                x,
+                y,
+                RADIO,
+                Obstaculo(**{k: barrera[k] for k in ("x", "y", "ancho", "alto")}, tipo="barrera"),
+            )
+        assert posicion(motor)[0] > 150
+
+    def test_en_el_motor_nunca_la_atraviesa_si_el_jugador_camina_hacia_ella(self):
+        motor = motor_con([barrera_movil(300, 0, 100, 0, alto=200)], inicio=(50, 100))
+        motor.aplicar_entrada(1, "derecha", "presionado")  # ella viene hacia él y él hacia ella
+        for _ in range(ticks_para(8.0)):
+            avanzar(motor, 1)
+            x, _ = posicion(motor)
+            barrera = motor.estado()["arena"]["obstaculos"][0]
+            assert x + RADIO <= barrera["x"] + 0.02  # siempre del lado izquierdo de la barrera
+
+    def test_el_jugador_puede_moverse_mientras_lo_empujan(self):
+        motor = motor_con([barrera_movil(100, 0, 380, 0, alto=200)], inicio=(150, 100))
+        motor.aplicar_entrada(1, "abajo", "presionado")
+        avanzar(motor, ticks_para(1.0))
+        assert posicion(motor)[1] > 100  # camina libremente en el otro eje

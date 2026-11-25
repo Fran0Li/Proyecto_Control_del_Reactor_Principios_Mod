@@ -67,6 +67,7 @@ def test_estado_servidor(monkeypatch, respuesta, error, texto):
     con_respuesta(monkeypatch, respuesta, error)
     assert asyncio.run(api_client.estado_servidor()) == texto
 
+
 def test_listar_partidas_disponibles(monkeypatch):
     partidas = [{"id": 1, "escenario": "laboratorio", "jugadores": 2}]
     llamadas = con_respuesta(monkeypatch, Respuesta(200, partidas))

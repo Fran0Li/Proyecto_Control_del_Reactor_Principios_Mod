@@ -268,7 +268,7 @@ def test_dibuja_en_todos_los_estados(monkeypatch):
     asyncio.run(escenario())
 
 
-#  lobby 
+#  lobby
 
 
 def lobby_con(monkeypatch, resultado):
@@ -340,6 +340,7 @@ def test_lobby_dibuja_con_y_sin_mensaje(monkeypatch):
 
 
 #  panel del canal
+
 
 class CanalFalso:
     mensajes: list = []

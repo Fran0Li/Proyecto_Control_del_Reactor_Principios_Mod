@@ -50,10 +50,18 @@ def crear_fuentes(
 
 
 class ControlesJugador:
-    def __init__(self, fuentes: Iterable[FuenteEntrada], enviar: Callable[[dict], Any]) -> None:
+    def __init__(
+        self,
+        fuentes: Iterable[FuenteEntrada],
+        enviar: Callable[[dict], Any],
+        seq_inicial: int = 0,
+    ) -> None:
+        """`seq_inicial`: el último `seq` enviado por la misma conexión. El servidor descarta todo
+        `seq` que no sea mayor al anterior de esa conexión, así que al volver a la arena con el
+        mismo canal hay que seguir contando desde ahí, no desde 0."""
         self.fuentes = list(fuentes)
         self._enviar = enviar
-        self._seq = 0
+        self._seq = seq_inicial
         self.ultimo_origen: str | None = None
 
     def procesar(self, evento: Any) -> None:
@@ -81,6 +89,11 @@ class ControlesJugador:
             for aviso in fuente.obtener_avisos():
                 self._enviar(aviso)
         return enviadas
+
+    @property
+    def seq(self) -> int:
+        """El último número de secuencia enviado."""
+        return self._seq
 
     def dibujar(self, pantalla: Any) -> None:
         for fuente in self.fuentes:

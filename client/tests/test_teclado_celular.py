@@ -1,6 +1,8 @@
-"""Campos de texto en el celular: al tocarlos se abre el cuadro de texto del navegador."""
+"""En el celular, tocar un campo de texto abre el cuadro del navegador con el teclado."""
 
 import os
+import sys
+import types
 
 import pygame
 import pytest
@@ -13,74 +15,103 @@ from src.screens.componentes import CampoTexto
 def pygame_sin_ventana():
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()
-    pygame.display.set_mode((400, 300))
+    pygame.display.set_mode((960, 640))
     yield
     pygame.quit()
 
 
-def tocar(campo, dentro=True):
-    pos = campo.rect.center if dentro else (campo.rect.right + 50, campo.rect.bottom + 50)
-    campo.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1))
+def toque(campo):
+    return pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=campo.rect.center, button=1)
 
 
-def campo_con_teclado(respuesta, oculto=False):
-    pedidos = []
-
-    def pedir(etiqueta, actual):
-        pedidos.append((etiqueta, actual))
-        return respuesta
-
-    campo = CampoTexto(pygame.Rect(10, 40, 200, 40), "Usuario", oculto=oculto)
-    campo.pedir_texto = pedir
-    return campo, pedidos
+def campo_nuevo(oculto=False):
+    return CampoTexto(pygame.Rect(300, 200, 360, 42), "Usuario", oculto)
 
 
-def test_en_escritorio_no_se_pide_el_texto_aparte():
-    assert not navegador.es_pantalla_tactil()
-    assert CampoTexto(pygame.Rect(0, 0, 100, 30), "Correo").pedir_texto is None
+@pytest.fixture
+def celular(monkeypatch):
+    """Simula el `window` del navegador de un celular; guarda lo que se le preguntó."""
+    preguntas = []
+    respuestas = []
+
+    class Consulta:
+        matches = True
+
+    ventana = types.SimpleNamespace(
+        matchMedia=lambda consulta: Consulta(),
+        prompt=lambda etiqueta, actual: preguntas.append((etiqueta, actual)) or respuestas.pop(0),
+    )
+    monkeypatch.setattr(navegador, "EN_NAVEGADOR", True)
+    monkeypatch.setitem(sys.modules, "platform", types.SimpleNamespace(window=ventana))
+    return preguntas, respuestas
 
 
-def test_al_tocar_el_campo_se_escribe_lo_del_teclado_del_celular():
-    campo, pedidos = campo_con_teclado("luis_serrano")
-    campo.texto = "lu"
-
-    tocar(campo)
-
-    assert pedidos == [("Usuario", "lu")]
-    assert campo.texto == "luis_serrano" and campo.activo
+def test_en_escritorio_no_se_abre_ningun_cuadro():
+    assert navegador.es_pantalla_tactil() is False
+    assert navegador.pedir_texto("Usuario") is None
 
 
-def test_si_cancela_queda_lo_que_habia():
-    campo, _ = campo_con_teclado(None)
-    campo.texto = "luis"
+def test_en_el_celular_tocar_el_campo_pide_el_texto(celular):
+    preguntas, respuestas = celular
+    respuestas.append("francisco")
+    campo = campo_nuevo()
 
-    tocar(campo)
+    campo.handle_event(toque(campo))
 
-    assert campo.texto == "luis"
+    assert campo.activo and campo.texto == "francisco"
+    assert preguntas == [("Usuario", "")]
 
 
-def test_la_contrasena_no_se_muestra_en_el_cuadro():
-    campo, pedidos = campo_con_teclado("Secreta123", oculto=True)
+def test_si_se_cancela_el_campo_queda_como_estaba(celular):
+    _, respuestas = celular
+    respuestas.append(None)
+    campo = campo_nuevo()
+    campo.texto = "ana"
+
+    campo.handle_event(toque(campo))
+
+    assert campo.texto == "ana"
+
+
+def test_la_contrasena_no_se_muestra_en_el_cuadro(celular):
+    preguntas, respuestas = celular
+    respuestas.append("nueva123")
+    campo = campo_nuevo(oculto=True)
     campo.texto = "vieja"
 
-    tocar(campo)
+    campo.handle_event(toque(campo))
 
-    assert pedidos == [("Usuario", "")]
-    assert campo.texto == "Secreta123"
-
-
-def test_respeta_el_largo_maximo():
-    campo, _ = campo_con_teclado("x" * 500)
-    campo.largo_maximo = 30
-
-    tocar(campo)
-
-    assert campo.texto == "x" * 30
+    assert preguntas == [("Usuario", "")]  # no se le pasa la contraseña anterior
+    assert campo.texto == "nueva123"
 
 
-def test_tocar_fuera_del_campo_no_abre_el_teclado():
-    campo, pedidos = campo_con_teclado("nada")
+def test_respeta_el_largo_maximo_y_quita_saltos_de_linea(celular):
+    _, respuestas = celular
+    respuestas.append("a\nb" + "c" * 200)
+    campo = campo_nuevo()
 
-    tocar(campo, dentro=False)
+    campo.handle_event(toque(campo))
 
-    assert pedidos == [] and not campo.activo
+    assert campo.texto.startswith("abc") and len(campo.texto) == campo.largo_maximo
+
+
+def test_tocar_fuera_del_campo_no_pide_nada(celular):
+    preguntas, _ = celular
+    campo = campo_nuevo()
+
+    campo.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(5, 5), button=1))
+
+    assert preguntas == [] and not campo.activo
+
+
+def test_en_un_navegador_de_compu_se_escribe_con_el_teclado_normal(celular, monkeypatch):
+    preguntas, _ = celular
+    ventana = sys.modules["platform"].window
+    monkeypatch.setattr(
+        ventana, "matchMedia", lambda consulta: types.SimpleNamespace(matches=False)
+    )
+    campo = campo_nuevo()
+
+    campo.handle_event(toque(campo))
+
+    assert preguntas == [] and campo.activo

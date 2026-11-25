@@ -5,6 +5,7 @@ import os
 import pygame
 import pytest
 
+from src.screens import dibujo_guardianes
 from src.screens.dibujo_guardianes import (
     AZUL_ESCUDO,
     GRIS_ATURDIDO,
@@ -27,6 +28,15 @@ def pygame_sin_ventana():
     pygame.quit()
 
 
+@pytest.fixture
+def sin_sprites(monkeypatch):
+    """Sin la imagen: el guardián es el círculo morado de siempre."""
+    monkeypatch.setattr(dibujo_guardianes.sprites, "cargar", lambda *a, **k: None)
+    dibujo_guardianes._teñidos.clear()
+    yield
+    dibujo_guardianes._teñidos.clear()
+
+
 def pantalla_con(guardianes):
     superficie = pygame.Surface((300, 200))
     superficie.fill(BLANCO)
@@ -41,7 +51,7 @@ def color(superficie, x, y):
 GUARDIAN = {"id": 1, "x": 150, "y": 100, "radio": 18}
 
 
-def test_el_guardian_es_un_circulo_morado_con_borde_oscuro():
+def test_el_guardian_es_un_circulo_morado_con_borde_oscuro(sin_sprites):
     pantalla = pantalla_con([GUARDIAN])
     assert color(pantalla, 150, 100) == MORADO
     assert color(pantalla, 150 + 17, 100) == MORADO_OSCURO
@@ -52,7 +62,7 @@ def test_no_dibuja_fuera_del_radio():
     assert color(pantalla, 150 + 25, 100) == BLANCO
 
 
-def test_dibuja_varios_guardianes():
+def test_dibuja_varios_guardianes(sin_sprites):
     otro = {"id": 2, "x": 50, "y": 50, "radio": 18}
     pantalla = pantalla_con([GUARDIAN, otro])
     assert color(pantalla, 150, 100) == MORADO
@@ -81,3 +91,22 @@ def test_el_jugador_aturdido_es_gris():
 
 def test_el_jugador_escudado_es_azul():
     assert color_jugador("escudado") == AZUL_ESCUDO
+
+
+# --- con el sprite ------------------------------------------------------------------------------
+
+
+def test_el_guardian_es_el_tanque_morado_dentro_de_su_aro():
+    pantalla = pantalla_con([GUARDIAN])
+    assert color(pantalla, 150 + 17, 100) == MORADO_OSCURO  # el aro
+    assert color(pantalla, 150, 100) != BLANCO  # el sprite al centro
+    assert color(pantalla, 150 + 25, 100) == BLANCO
+
+
+def test_el_sprite_del_guardian_esta_tenido_de_morado():
+    imagen = dibujo_guardianes.sprite_guardian(18)
+    assert imagen.get_size() == (32, 32)
+    visibles = [imagen.get_at((x, y)) for x in range(32) for y in range(32)]
+    visibles = [p for p in visibles if p.a > 0 and (p.r + p.g + p.b) > 60]
+    # el tinte deja el verde más bajo que el rojo y el azul: tono morado
+    assert visibles and all(p.g <= p.r and p.g <= p.b for p in visibles)

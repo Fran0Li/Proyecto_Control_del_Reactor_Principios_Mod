@@ -5,7 +5,7 @@ import os
 import pygame
 import pytest
 
-from src.screens.arena import AMARILLO, BLANCO, RADIO_CELDA, ROJO
+from src.screens.arena import AMARILLO, BLANCO, RADIO_CELDA
 from tests.test_arena import ALTO, ANCHO, ARENA, PanelFalso, arena_con, dibujar
 
 
@@ -25,6 +25,7 @@ def panel_con_celdas(celdas, jugadores=()):
         "tipo": "estado",
         "jugadores": [{"jugador_id": i, "x": x, "y": y} for i, x, y in jugadores],
         "arena": {**ARENA, "celdas": celdas},
+        "partida": {"estado": "en_curso"},
     }
     return panel
 
@@ -76,4 +77,4 @@ def test_una_celda_recogida_deja_de_dibujarse():
 def test_los_jugadores_se_dibujan_encima_de_las_celdas():
     arena = arena_con(panel_con_celdas([celda(1, 300, 200)], jugadores=[(1, 300, 200)]))
 
-    assert dibujar(arena).get_at((300, 200))[:3] == ROJO
+    assert dibujar(arena).get_at((300, 200))[:3] not in (AMARILLO, BLANCO)

@@ -7,12 +7,13 @@ import time
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import sessionmaker
 
 from app.core.security import crear_token_acceso
 from app.db.session import get_session
 from app.main import app
 from app.models.usuario import Usuario
-from app.realtime import motor_partida
+from app.realtime import gestor_motores as modulo_gestor
 from app.realtime.arena import ANCHO_ARENA, PUNTOS_DE_INICIO, Arena, Reactor
 from app.realtime.connection_manager import manager
 from app.realtime.gestor_motores import gestor_motores
@@ -21,8 +22,12 @@ from app.repositories import UsuarioRepository
 
 
 @pytest.fixture()
-def client(db_session):
+def client(db_session, monkeypatch):
     app.dependency_overrides[get_session] = lambda: db_session
+    # los observadores del gestor (eventos, logros, ranking) escriben en la base de la prueba y no
+    # en la real: si esa base no está disponible, el motor se quedaría esperando
+    fabrica = sessionmaker(bind=db_session.get_bind(), expire_on_commit=False)
+    monkeypatch.setattr(gestor_motores, "_fabrica_sesiones", fabrica)
     try:
         with TestClient(app) as cliente:  # un solo ciclo de eventos para todas las conexiones
             yield cliente
@@ -134,6 +139,7 @@ def test_el_jugador_recibe_su_posicion_inicial_al_entrar(client, db_session):
             "puntaje": 0,
             "estado": "normal",
             "nombre": "jugador1",
+            "numero": 1,
         }
     ]
     assert estado["arena"]["ancho"] == ANCHO_ARENA
@@ -161,9 +167,9 @@ def test_soltar_el_control_detiene_al_jugador(client, db_session):
         time.sleep(0.3)  # varios ciclos del motor
         motor = gestor_motores.existente(partida)
         assert motor.controles_presionados(ana) == frozenset()
-        quieto = motor.estado()
+        quieto = motor.estado()["jugadores"]  # los guardianes y las puertas sí siguen moviéndose
         time.sleep(0.2)
-        assert motor.estado() == quieto
+        assert motor.estado()["jugadores"] == quieto
 
 
 def test_todos_los_jugadores_ven_el_movimiento_de_los_demas(client, db_session):
@@ -288,9 +294,9 @@ def test_el_motor_se_detiene_cuando_se_van_todos_los_jugadores(client, db_sessio
 
 
 def test_la_accion_junto_al_reactor_suma_puntos_y_todos_lo_ven(client, db_session, monkeypatch):
-    # La arena pone el primer punto de inicio encima del reactor
+    # La arena pone el primer punto de inicio encima del reactor, sin obstáculos ni guardianes
     arena = Arena(reactor=Reactor(x=240, y=135, radio=40))
-    monkeypatch.setattr(motor_partida, "arena_basica", lambda: arena)
+    monkeypatch.setattr(modulo_gestor, "crear_escenario", lambda nombre: (arena, []))
     partida, ana, beto = partida_de_dos(client, db_session)
 
     with client.websocket_connect(url_del_canal(partida, ana)) as canal_ana:

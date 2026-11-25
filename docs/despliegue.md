@@ -26,6 +26,11 @@ PC (cliente pygame) ─https/wss┤
 | `.github/workflows/deploy.yml` | Entrega continua: CI en verde en `develop` → SSH → desplegar → revisar `/api/health/db` |
 
 Las migraciones corren solas al arrancar el contenedor `server` (`alembic upgrade head`).
+Después cierra las partidas que quedaron en espera o en curso antes del reinicio
+(`python -m app.scripts.cerrar_partidas_activas`): los motores viven en memoria, así que esas
+partidas ya no pueden seguir y dejarían a sus jugadores sin poder crear ni unirse a otra (RN-04).
+Mientras el servidor corre, una partida sin iniciar se cierra sola si se queda 60 s sin nadie
+conectado (`GestorMotores`); una partida en curso sigue hasta el final para guardar su resultado.
 
 ## Lo que está desplegado
 

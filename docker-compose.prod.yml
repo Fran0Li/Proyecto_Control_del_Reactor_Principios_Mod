@@ -33,10 +33,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Migraciones pendientes y después la API. --proxy-headers: detrás de Caddy, para que la API
+    # Migraciones pendientes, cerrar las partidas que quedaron activas antes del reinicio
+    # (los motores viven en memoria) y después la API. --proxy-headers: detrás de Caddy, para que la API
     # sepa que el cliente entró por https.
     command: >
       sh -c "alembic upgrade head &&
+             python -m app.scripts.cerrar_partidas_activas &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000
              --proxy-headers --forwarded-allow-ips='*'"
 

@@ -75,13 +75,17 @@ class ArenaScreen:
         self.siguiente_pantalla = None
         if panel.canal is not None:
             fuentes = crear_fuentes(self.ancho, self.alto, CONTROL_PUERTO)
-            self.controles = ControlesJugador(fuentes, panel.canal.enviar)
+            # misma conexión que la vez anterior en la arena: el seq sigue desde donde quedó
+            seq = getattr(panel, "seq_enviada", 0)
+            self.controles = ControlesJugador(fuentes, panel.canal.enviar, seq_inicial=seq)
         self.aviso_control = AvisoControl()
         self._terminada_en = None
         self.activa = True
 
     def cerrar(self) -> None:
         if self.controles is not None:
+            if self.panel is not None:
+                self.panel.seq_enviada = self.controles.seq  # para la próxima vez en la arena
             self.controles.cerrar()
             self.controles = None
         self.activa = False

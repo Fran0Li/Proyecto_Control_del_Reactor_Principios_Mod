@@ -216,3 +216,12 @@ def test_la_arena_muestra_las_posiciones_al_terminar_y_esc_vuelve(monkeypatch):
     arena.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
 
     assert arena.siguiente_pantalla == "lobby"
+
+
+def test_un_canal_nuevo_empieza_el_seq_de_cero(monkeypatch):
+    panel = panel_abierto(monkeypatch)
+    panel.seq_enviada = 40
+
+    asyncio.run(panel.abrir(5, "token-ana", es_creador=True))
+
+    assert panel.seq_enviada == 0

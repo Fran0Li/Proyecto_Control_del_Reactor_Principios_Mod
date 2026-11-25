@@ -50,6 +50,8 @@ class LoginService:
         # se revisa después de la contraseña para no revelar qué cuentas existen
         if not usuario.correo_verificado:
             raise CorreoNoVerificadoError("Verificá tu correo antes de iniciar sesión")
+        if usuario.bloqueado:
+            raise CuentaBloqueadaError("Tu cuenta fue bloqueada por un administrador")
 
         usuario.intentos_fallidos = 0
         usuario.bloqueado_hasta = None

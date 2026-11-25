@@ -10,6 +10,11 @@ class Sesion:
     token: str
     usuario_id: int
     nombre_usuario: str
+    rol: str = "jugador"  # "administrador" ve la pantalla de administración (US-28)
+
+    @property
+    def es_admin(self) -> bool:
+        return self.rol == "administrador"
 
 
 _actual: Sesion | None = None
@@ -17,7 +22,7 @@ _actual: Sesion | None = None
 
 def iniciar(token: str, usuario: dict) -> Sesion:
     global _actual
-    _actual = Sesion(token, usuario["id"], usuario["nombre_usuario"])
+    _actual = Sesion(token, usuario["id"], usuario["nombre_usuario"], usuario.get("rol", "jugador"))
     return _actual
 
 

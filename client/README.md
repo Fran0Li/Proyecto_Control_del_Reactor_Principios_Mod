@@ -121,6 +121,15 @@ abre el cuadro de texto del navegador (`window.prompt`), que sí lo abre; lo esc
 (`src/navegador.py`, `pedir_texto`). En la compu, también en el navegador, se escribe como siempre.
 Limitación: en ese cuadro la contraseña se ve mientras se escribe; en el juego queda con asteriscos.
 
+## Sonidos (US-29)
+
+En la arena suena la música de la partida en bucle (`assets/audio/musica_partida.ogg`) y efectos
+generados en código (`src/sonidos.py`): extraer del reactor, recoger una bolita de energía, el
+golpe de un guardián (a cualquier jugador) y el inicio de un evento especial. `DetectorSonidos`
+los decide comparando cada estado del servidor con el anterior, sin cambios en el servidor. La
+tecla **M** silencia todo. Sin audio disponible el juego sigue igual. Detalles en
+`assets/audio/README.md`.
+
 ## Toques: Android e iPhone
 
 Los botones y campos (`Boton`, `CampoTexto`) aceptan el dedo (`FINGERDOWN`) y el clic de mouse.

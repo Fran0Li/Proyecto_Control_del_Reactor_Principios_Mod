@@ -22,6 +22,7 @@ from src.screens.dibujo_reactor import dibujar_reactor
 from src.screens.hud_partida import HudPartida
 from src.screens.panel_canal import PanelCanal
 from src.screens.particulas import SistemaParticulas
+from src.sonidos import DetectorSonidos, sonidos
 
 BLANCO = (255, 255, 255)
 ROJO = (220, 30, 30)
@@ -64,6 +65,7 @@ class ArenaScreen:
         self._estados_previos: dict[int, str | None] = {}
         self._ultimo_cuadro: float | None = None
         self.boton_volver = boton_secundario(RECT_VOLVER.copy(), "Volver al lobby")
+        self.detector_sonidos = DetectorSonidos()  # US-29: qué sonó entre un estado y otro
 
     # ciclo de vida
 
@@ -81,6 +83,8 @@ class ArenaScreen:
         self.aviso_control = AvisoControl()
         self._terminada_en = None
         self.activa = True
+        sonidos.precargar()  # US-29: efectos listos antes del primer golpe
+        sonidos.iniciar_musica()  # US-29: música de la partida en bucle (M la silencia)
 
     def cerrar(self) -> None:
         if self.controles is not None:
@@ -93,6 +97,8 @@ class ArenaScreen:
         self.particulas.vaciar()
         self._estados_previos = {}
         self._ultimo_cuadro = None
+        self.detector_sonidos.reiniciar()
+        sonidos.detener_musica()
 
     def _salir(self) -> None:
         self._soltar_todo()
@@ -125,6 +131,8 @@ class ArenaScreen:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self._salir()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+            sonidos.alternar_silencio()  # música y efectos
         elif self._toco_volver(event):
             self._salir()
         elif self.controles is not None:
@@ -140,6 +148,8 @@ class ArenaScreen:
         if self.panel.estado is not None:
             self._acercar(self.panel.estado["jugadores"])
             self._detectar_golpes(self.panel.estado["jugadores"])
+            for nombre in self.detector_sonidos.revisar(self.panel.estado, sesion.jugador_id()):
+                sonidos.reproducir(nombre)
         ahora = self._reloj()
         if self._ultimo_cuadro is not None:
             self.particulas.actualizar(min(ahora - self._ultimo_cuadro, 0.1))

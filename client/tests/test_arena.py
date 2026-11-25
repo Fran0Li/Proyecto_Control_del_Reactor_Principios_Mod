@@ -398,3 +398,27 @@ def test_al_volver_a_la_arena_con_el_mismo_canal_el_seq_sigue_contando():
 
     con_seq = [m["seq"] for m in panel.canal.enviados if "seq" in m]
     assert con_seq == [1, 2, 3, 4, 5, 6, 7]
+
+
+# sonidos (US-29)
+
+
+def test_la_arena_toca_los_sonidos_que_detecta_y_m_silencia(monkeypatch):
+    from src.screens import arena as modulo_arena
+
+    tocados = []
+    silencios = []
+    monkeypatch.setattr(modulo_arena.sonidos, "reproducir", tocados.append)
+    monkeypatch.setattr(modulo_arena.sonidos, "alternar_silencio", lambda: silencios.append(1))
+    monkeypatch.setattr(modulo_arena.sesion, "jugador_id", lambda: 1)
+    panel = PanelFalso([(1, 240, 135)])
+    arena = arena_con(panel)
+    arena.update()
+
+    panel.estado = estado_con([(1, 240, 135)])
+    panel.estado["jugadores"][0]["estado"] = "aturdido"
+    arena.update()
+    arena.handle_event(tecla(pygame.KEYDOWN, pygame.K_m))
+
+    assert tocados == ["golpe"]
+    assert silencios == [1]

@@ -20,6 +20,7 @@ la sala de espera) **no cuenta** ni para logros ni para retos.
 
 - Cada presión del botón de acción **tocando el reactor** saca hasta **10 de energía**, que se
   suman al puntaje. Cada jugador tiene que esperar **0,5 s** entre extracciones.
+- Cada **celda de energía** que se recoge da **5 puntos** (no cuenta como energía del reactor).
 - El reactor empieza con **100 de energía**, compartida entre todos, y se recarga **5 por segundo**.
   Por eso, sacar mucha energía toma tiempo: un jugador solo llega a 300 en unos 45 segundos.
 - La partida dura **300 segundos** o termina cuando alguien llega a **500 puntos**.
@@ -47,6 +48,14 @@ esa partida.
 
 Los puntos de los retos se suman al momento y cuentan para el ganador y para llegar a 500.
 
+## Efecto de los eventos especiales (US-16)
+
+Durante el evento **Puntos dobles** todo lo que se gana vale el doble, y eso incluye los puntos de
+los retos y la energía que se saca del reactor. Los **logros** no cambian: `energia_300` cuenta la
+energía real que sale del reactor, sin duplicar. La invasión agrega guardianes: si uno te alcanza
+se reinicia la cuenta de **Sin rasguños** y se pierde **Intocable**, igual que con cualquier otro
+guardián.
+
 ## Guion de prueba con dos jugadores
 
 1. Iniciar sesión con dos cuentas (una con el control físico y otra con el teclado) y entrar a la
@@ -65,6 +74,9 @@ Los puntos de los retos se suman al momento y cuentan para el ganador y para lle
      (si ningún guardián lo alcanzó).
    - Jugador 2: **Bautizo nuclear** e **Intocable** si terminó con puntos y sin golpes.
 
+Los eventos especiales empiezan a los 30 s: si un reto se cumple justo durante **Puntos dobles**,
+los números del paso 3 al 4 salen multiplicados por 2 mientras dure el evento.
+
 ## Dónde verlo en la base de datos (demo local)
 
 Con `docker compose up` corriendo:
@@ -76,6 +88,10 @@ SELECT jugador_id, logro, partida_id, obtenido_en FROM logros_jugador ORDER BY j
 -- retos cumplidos en la última partida
 SELECT jugador_id, datos->>'nombre' AS reto, datos->>'puntos' AS puntos, timestamp
 FROM eventos WHERE tipo = 'reto_completado' ORDER BY id DESC;
+
+-- eventos especiales de la última partida (US-16)
+SELECT tipo, datos->>'nombre' AS evento, timestamp
+FROM eventos WHERE tipo LIKE 'evento_especial%' ORDER BY id DESC;
 ```
 
 (Por terminal: `docker compose exec db psql -U reactor -d reactor`.)
@@ -90,3 +106,5 @@ catálogo con `obtenido` en true o false para ese jugador.
 - Retos: `server/tests/test_retos.py` (cada reto con sus límites, una vez por partida, nada antes
   de iniciar ni después de terminar, una prueba de punta a punta con el motor real, que los puntos
   cuentan para ganar y que quedan en la tabla `eventos`).
+- Eventos especiales: `server/tests/test_eventos_especiales.py` (tiempos, puntos dobles, invasión
+  y que los efectos se deshacen al terminar).

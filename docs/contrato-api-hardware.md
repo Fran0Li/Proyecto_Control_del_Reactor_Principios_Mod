@@ -3,9 +3,10 @@
 Define cómo llegan al servidor las señales del control físico de 5 botones (RNF-10) y cómo se
 mapean al mismo comando que usa el movimiento por teclado (RF-010, RF-026, CU-07).
 
-Estado: **propuesta v1, Sprint 2**. Los mensajes de la capa 2 (WebSocket) se validan con el
-responsable de US-25 antes de implementarlos. En el Sprint 3 el estado de la partida agrega el
-`puntaje` de cada jugador y el `reactor`, los `obstaculos` y las `celdas` de la arena.
+Estado: **v1, Sprint 3**. Los mensajes de la capa 2 (WebSocket) los usan el cliente y el servidor.
+El estado de la partida incluye el `puntaje` y el `estado` de cada jugador, el `reactor`, los
+`obstaculos` y las `celdas` de la arena, los `guardianes`, el `escenario`, la información de la
+`partida` (reloj y meta) y el evento especial en marcha (US-16).
 
 ## Resumen
 
@@ -115,19 +116,34 @@ Todos los mensajes son JSON con un campo `tipo`.
 
 **Estado de la partida** (lo define US-25). El servidor lo envía a todos los jugadores
 conectados a la partida cada vez que algo cambia: alguien entra, alguien sale, alguien se
-mueve o cambia la energía del reactor. Se envía como máximo cada 50 ms.
+mueve, cambia la energía del reactor, se mueve un guardián o una barrera, cambia el reloj o
+empieza o termina un evento especial. Se envía como máximo cada 50 ms.
 
 ```json
 {
   "tipo": "estado",
-  "jugadores": [{ "jugador_id": 3, "x": 240, "y": 135, "puntaje": 0 }],
+  "escenario": "laboratorio",
+  "jugadores": [
+    { "jugador_id": 3, "x": 240, "y": 135, "puntaje": 15, "estado": "normal", "nombre": "ana", "numero": 1 }
+  ],
   "arena": {
     "ancho": 960,
     "alto": 540,
     "radio": 20,
     "reactor": { "x": 480, "y": 270, "radio": 40 },
-    "obstaculos": [{ "x": 300, "y": 200, "ancho": 80, "alto": 20, "tipo": "barrera" }],
-    "celdas": [{ "id": 1, "x": 200, "y": 400, "valor": 10 }]
+    "obstaculos": [
+      { "x": 60, "y": 60, "ancho": 90, "alto": 30, "tipo": "barrera" },
+      { "x": 120, "y": 180, "ancho": 30, "alto": 60, "tipo": "puerta", "abierta": false }
+    ],
+    "celdas": [{ "id": 1, "x": 240, "y": 45, "valor": 5 }]
+  },
+  "guardianes": [{ "id": 1, "x": 480, "y": 40, "radio": 18 }],
+  "partida": {
+    "estado": "en_curso",
+    "tiempo_limite": 300,
+    "puntaje_objetivo": 500,
+    "tiempo_restante": 240,
+    "evento": { "clave": "invasion", "nombre": "Invasión", "restante": 7 }
   },
   "reactor": { "energia": 90, "capacidad": 100 }
 }
@@ -135,19 +151,24 @@ mueve o cambia la energía del reactor. Se envía como máximo cada 50 ms.
 
 | Campo | Notas |
 | --- | --- |
+| `escenario` | Nombre del mapa de la partida (`laboratorio`, `estacion_espacial`, `planta_industrial`, `centro_investigacion` o `complejo_militar`). El cliente lo usa para elegir el fondo. No viene si la partida no tiene escenario |
 | `jugadores` | Uno por jugador conectado, ordenados por `jugador_id`. `x` e `y` son píxeles enteros |
 | `jugadores[].puntaje` | Puntos del jugador en la partida. Empieza en 0 y puede subir o bajar |
+| `jugadores[].estado` | `normal`, `aturdido` (no se mueve ni actúa, 3 s) o `escudado` (no lo penalizan, 2 s) |
+| `jugadores[].nombre`, `numero` | Nombre para mostrar y número del 1 al 4 (su esquina de inicio y su color) |
 | `arena` | Tamaño de la arena y radio del jugador, para que el cliente dibuje sin números fijos |
 | `arena.reactor` | Centro (`x`, `y`) y `radio` del reactor |
-| `arena.obstaculos` | Rectángulos del mapa (`x`, `y`, `ancho`, `alto`). `tipo` dice qué hacen: `barrera`, `trampa`, `puerta` |
-| `arena.celdas` | Celdas de energía que están en el mapa (`id`, `x`, `y`, `valor`). Es una lista vacía si no hay |
+| `arena.obstaculos` | Rectángulos del mapa (`x`, `y`, `ancho`, `alto`). `tipo` dice qué hacen: `barrera`, `barrera_movil`, `trampa`, `puerta`. Las puertas traen `abierta`. La `barrera_movil` viene en el lugar donde está ahora |
+| `arena.celdas` | Celdas de energía que están en el mapa (`id`, `x`, `y`, `valor`). La celda recogida no viene hasta que reaparece. Es una lista vacía si no hay |
+| `guardianes` | Guardianes en el mapa (`id`, `x`, `y`, `radio`). Los de la invasión tienen id 100 y 101 y solo están mientras dura el evento |
+| `partida` | `estado` es `esperando`, `en_curso` o `finalizada`. `tiempo_limite`, `puntaje_objetivo` y `tiempo_restante` (segundos enteros) vienen cuando la partida ya se inició |
+| `partida.evento` | Evento especial en marcha (US-16): `clave` (`puntos_dobles` o `invasion`), `nombre` y `restante` (segundos enteros). **Solo viene mientras hay un evento activo** |
 | `reactor` | Energía que le queda al reactor (`energia`, entero) y lo máximo que guarda (`capacidad`). Cambia cuando alguien extrae y mientras se recarga |
 
 Los puntos de inicio de los jugadores no se envían: el cliente ya recibe la posición de cada uno.
 
-Valores (provisionales): arena de 960 × 540 px, velocidad de 120 px/s, jugador de radio 20, reactor
-de radio 40 al centro y 4 puntos de inicio. Por ahora la arena no trae obstáculos ni celdas y solo
-hay colisión con los límites del mapa; los obstáculos (US-14) y las celdas (US-13) llegan después.
+Valores: arena de 960 × 540 px, velocidad del jugador de 120 px/s, jugador de radio 20, reactor
+de radio 40 al centro y 4 puntos de inicio.
 
 **Error:**
 
@@ -170,6 +191,27 @@ hay colisión con los límites del mapa; los obstáculos (US-14) y las celdas (U
   al puntaje. Cada jugador espera **0,5 s** entre una extracción y la siguiente, así no gana quien
   presiona más rápido. El reactor empieza con **100** de energía, se recarga **5 por segundo** y
   no pasa de 100; si está vacío, la acción no da nada. Valores provisionales.
+- **Celdas de energía (US-13):** tocar una celda la recoge y suma **5** puntos (menos que una
+  extracción del reactor, RN-06). Reaparece a los **10 s**. Si dos jugadores la tocan a la vez,
+  se la lleva uno solo.
+- **Obstáculos (US-14):** la `barrera` bloquea; la `trampa` no bloquea pero deja al jugador al
+  **40 %** de su velocidad; la `puerta` empieza cerrada y se abre y se cierra sola cada **4 s**;
+  la `barrera_movil` va y viene a **30 px/s**, bloquea y **empuja** al jugador que quede
+  debajo (esté quieto o caminando).
+- **Guardianes (US-15):** se mueven solos a **80 px/s** (menos que el jugador). Los hay de
+  patrulla, de ruta fija y de persecución (detectan a **150 px**). Si uno alcanza a un jugador,
+  este queda `aturdido` **3 s** y pierde **5** puntos (sin bajar de 0); después queda `escudado`
+  **2 s**. El servidor avisa la penalización como evento `jugador_penalizado`.
+- **Eventos especiales (US-16):** el primero sale a los **30 s** de iniciada la partida, cada uno
+  dura **10 s** y el siguiente llega entre **30 y 45 s** después. Nunca hay dos a la vez ni el mismo
+  dos veces seguidas. Hay dos:
+  - `puntos_dobles`: todo lo que se gana (celdas, reactor, retos) vale el doble. Las penalizaciones
+    no se duplican.
+  - `invasion`: aparecen dos guardianes perseguidores (ids 100 y 101) en lados opuestos del
+    reactor, que persiguen desde cualquier punto de la arena.
+
+  Al terminar el evento, o si la partida termina antes, el efecto se deshace. El servidor avisa
+  `evento_especial_iniciado` y `evento_especial_finalizado`, que quedan en la tabla `eventos`.
 - Si el jugador está "Aturdido" o "Eliminado temporalmente", ignora sus entradas (CU-07, E3).
 - Una entrada con campos inválidos se descarta y se responde con `error` (CU-07, E1).
 - Límite de **30 entradas por segundo** por jugador; lo que pase de ahí se descarta.
@@ -228,4 +270,3 @@ local. El cliente lo abre como si fuera un puerto serial, con `socket://localhos
 | Reconexión | `HELLO CR-PAD-01 1.0` después de una desconexión | Dispositivo conectado |
 | Entrada inválida al servidor | `"control": "saltar"` | Respuesta `error` con `entrada_invalida` |
 | Jugador aturdido | Entrada `arriba` | El servidor la ignora |
-| Fuente indistinta | Misma secuencia por teclado y por Serial | Mismo movimiento en el servidor |

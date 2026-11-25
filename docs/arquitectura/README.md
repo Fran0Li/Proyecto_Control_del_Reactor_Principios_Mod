@@ -12,6 +12,7 @@ hicieron antes de elegir el stack actual (ADR 0001) y el cliente móvil con pygb
 | ADRs de patrones de diseño | [0004 Factory](../adr/0004-factory-creacion-de-partidas.md), [0005 Adapter](../adr/0005-adapter-fuentes-de-entrada.md), [0006 Observer](../adr/0006-observer-motor-de-partida.md), [0007 Facade](../adr/0007-facade-api-client.md), [0008 Bridge](../adr/0008-bridge-conexion-del-cliente.md) y [0009 Repository](../adr/0009-repository-persistencia.md); en el Sprint 3, [0012 Flyweight](../adr/0012-flyweight-particulas.md) | AB#81 |
 | [ADR 0010: despliegue en la nube](../adr/0010-despliegue-en-la-nube.md) | VM en Azure con el mismo Docker Compose más Caddy, y entrega continua desde `develop` | AB#120, AB#121 |
 | [ADR 0011: acciones del contexto](../adr/0011-acciones-del-contexto.md) | Qué hace el botón de acción según dónde esté el jugador (US-11) | AB#127 |
+| [ADR 0013: eventos especiales](../adr/0013-eventos-especiales.md) | Factory de eventos (puntos dobles e invasión) y programador que los inicia y los termina (US-16) | AB#93 |
 
 ## Resumen
 
@@ -23,8 +24,9 @@ hicieron antes de elegir el stack actual (ADR 0001) y el cliente móvil con pygb
 - **Contenedores:** backend y PostgreSQL con Docker Compose; la misma imagen se construye en el CI.
 - **Nube (Sprint 3):** el mismo Compose en una VM de Azure, con Caddy de proxy HTTPS, y despliegue
   automático en cada merge a `develop` que pase el CI (ADR 0010).
-- **Patrones de diseño:** Factory (creacional), Adapter (estructural) y Observer (de
-  comportamiento), además de Facade, Bridge y Repository (ADRs 0004 a 0009).
+- **Patrones de diseño:** Factory (creacional, también para los escenarios y los eventos
+  especiales), Adapter (estructural) y Observer (de comportamiento), además de Facade, Bridge,
+  Repository y Flyweight (ADRs 0004 a 0013).
 
 ## Cambios respecto al ERS del Sprint 1
 

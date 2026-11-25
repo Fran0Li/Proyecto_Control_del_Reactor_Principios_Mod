@@ -22,7 +22,7 @@ from app.realtime.arena import (
 from app.realtime.guardianes import Guardian, Patrulla, Perseguir, RutaFija
 from app.realtime.obstaculos import BARRERA, BARRERA_MOVIL, PUERTA, TRAMPA
 
-VALOR_CELDA = 10  # CU-10 del ERS: una celda da 10 puntos
+VALOR_CELDA = 5  # CU-10 del ERS: una celda da 10 puntos
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,8 @@
 
 Todo sale del estado que manda el servidor en cada cambio: el reloj usa
 `estado["partida"]["tiempo_restante"]` y la tabla los puntajes de `estado["jugadores"]`.
-Así todos los jugadores ven lo mismo.
+Así todos los jugadores ven lo mismo. Si hay un evento especial (US-16), su nombre y los
+segundos que le quedan salen en una fila al final del mismo cuadro de posiciones.
 """
 
 import pygame
@@ -13,8 +14,14 @@ COLOR_FONDO = (10, 14, 28, 190)
 COLOR_TEXTO = (255, 255, 255)
 COLOR_PROPIO = (255, 215, 80)  # la fila del jugador que mira la pantalla
 COLOR_URGENTE = (240, 90, 90)
+COLOR_EVENTO = (120, 200, 255)  # evento que no tiene color propio
+COLORES_EVENTO = {
+    "puntos_dobles": (90, 220, 130),
+    "invasion": (240, 100, 100),
+}
 ANCHO_TABLA = 240
 ALTO_FILA = 28
+ALTO_EVENTO = ALTO_FILA + 4  # la fila del evento y su línea separadora
 MARGEN = 12
 
 
@@ -31,6 +38,11 @@ def texto_reloj(info_partida: dict) -> str:
     if estado == "finalizada":
         return "Fin"
     return formato_reloj(info_partida.get("tiempo_restante", 0))
+
+
+def formato_evento(evento: dict) -> tuple[str, str]:
+    """{"nombre": "Invasión", "restante": 8} -> ("Invasión", "8 s")."""
+    return evento.get("nombre", "Evento"), f"{max(0, int(evento.get('restante', 0)))} s"
 
 
 def posiciones(jugadores: list[dict]) -> list[tuple[int, str, int, int]]:
@@ -82,7 +94,8 @@ class HudPartida:
             return
         objetivo = info.get("puntaje_objetivo")
         titulo = f"Posiciones (meta {objetivo})" if objetivo else "Posiciones"
-        alto = ALTO_FILA * (len(filas) + 1) + 8
+        evento = info.get("evento")
+        alto = ALTO_FILA * (len(filas) + 1) + 8 + (ALTO_EVENTO if evento else 0)
         rect = pygame.Rect(screen.get_width() - ANCHO_TABLA - MARGEN, MARGEN, ANCHO_TABLA, alto)
         self._caja(screen, rect)
         y = rect.y + 6
@@ -94,3 +107,17 @@ class HudPartida:
             screen.blit(fila, (rect.x + 10, y))
             valor = self.fuente.render(str(puntaje), True, color)
             screen.blit(valor, valor.get_rect(topright=(rect.right - 10, y)))
+        if evento:
+            self._dibujar_evento(screen, rect, y + ALTO_FILA, evento)
+
+    def _dibujar_evento(
+        self, screen: pygame.Surface, rect: pygame.Rect, y: int, evento: dict
+    ) -> None:
+        """Fila final del cuadro: línea, nombre a la izquierda y segundos a la derecha."""
+        color = COLORES_EVENTO.get(evento.get("clave"), COLOR_EVENTO)
+        nombre, segundos = formato_evento(evento)
+        pygame.draw.line(screen, color, (rect.x + 10, y + 2), (rect.right - 10, y + 2))
+        y += 6
+        screen.blit(self.fuente.render(nombre, True, color), (rect.x + 10, y))
+        valor = self.fuente.render(segundos, True, color)
+        screen.blit(valor, valor.get_rect(topright=(rect.right - 10, y)))

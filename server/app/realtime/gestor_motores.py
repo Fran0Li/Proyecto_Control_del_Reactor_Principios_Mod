@@ -9,6 +9,7 @@ from app.realtime.connection_manager import ConnectionManager, manager
 from app.realtime.escenarios import crear_escenario
 from app.realtime.evaluador_logros import EvaluadorLogros, FabricaSesiones
 from app.realtime.eventos import PARTIDA_FINALIZADA, EventoPartida
+from app.realtime.eventos_especiales import ProgramadorEventos
 from app.realtime.motor_partida import EN_CURSO, FINALIZADA, MotorPartida
 from app.realtime.notificador_websocket import NotificadorWebSocket
 from app.realtime.registro_eventos import RegistroEventos
@@ -29,12 +30,17 @@ class GestorMotores:
         `escenario` solo se usa al crearlo (US-09); sin escenario queda la arena básica."""
         motor = self._motores.get(partida_id)
         if motor is None:
+            eventos = ProgramadorEventos()  # US-16: puntos dobles e invasión
             if escenario is None:
-                motor = MotorPartida(partida_id)
+                motor = MotorPartida(partida_id, eventos=eventos)
             else:
                 arena, guardianes = crear_escenario(escenario)
                 motor = MotorPartida(
-                    partida_id, arena=arena, guardianes=guardianes, escenario=escenario
+                    partida_id,
+                    arena=arena,
+                    guardianes=guardianes,
+                    escenario=escenario,
+                    eventos=eventos,
                 )
             # Los interesados en la partida se suscriben aquí; el motor no los conoce (ADR 0006)
             motor.suscribir(NotificadorWebSocket(self._canales))

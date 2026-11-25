@@ -118,10 +118,18 @@ def test_hay_ocho_celdas_y_ninguna_dentro_de_un_obstaculo(nombre):
 
 
 @todos
-def test_toda_celda_vale_diez_puntos(nombre):
-    """CU-10 del ERS: la celda otorga 10 puntos."""
+def test_toda_celda_vale_cinco_puntos(nombre):
+    """Una celda otorga 5 puntos: menos que extraer del reactor (RN-06)."""
     arena, _ = crear_escenario(nombre)
-    assert {c.valor for c in arena.celdas} == {10}
+    assert {c.valor for c in arena.celdas} == {5}
+
+
+def test_una_celda_vale_menos_que_una_extraccion_del_reactor():
+    """RN-06: lo fácil da pocos puntos y lo disputado (el reactor) da más."""
+    from app.realtime.escenarios import VALOR_CELDA
+    from app.realtime.reactor import ENERGIA_POR_EXTRACCION
+
+    assert VALOR_CELDA < ENERGIA_POR_EXTRACCION
 
 
 @todos

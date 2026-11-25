@@ -197,7 +197,7 @@ async def preparar(usuario: str | None, partida_id: int | None) -> tuple[dict, i
     if partida_id is not None:  # una partida en la que ya está
         return sesion, partida_id
     try:
-        partida = await api_client.crear_partida(sesion["usuario"]["id"])
+        partida = await api_client.crear_partida(sesion["access_token"])
     except api_client.ApiError as error:
         if error.estado != 409:
             raise

@@ -57,9 +57,13 @@ def crear_jugadores(db_session, cantidad):
 
 def partida_de_dos(client, db_session):
     ana, beto = crear_jugadores(db_session, 2)
-    partida = client.post("/partidas", json={"creador_id": ana}).json()["id"]
-    assert client.post(f"/partidas/{partida}/unirse", json={"jugador_id": beto}).status_code == 200
+    partida = client.post("/partidas", headers=cabecera(ana)).json()["id"]
+    assert client.post(f"/partidas/{partida}/unirse", headers=cabecera(beto)).status_code == 200
     return partida, ana, beto
+
+
+def cabecera(jugador_id):
+    return {"Authorization": f"Bearer {crear_token_acceso(jugador_id)}"}
 
 
 def url_del_canal(partida_id, jugador_id):

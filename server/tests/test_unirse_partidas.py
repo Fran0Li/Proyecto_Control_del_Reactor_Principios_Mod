@@ -53,14 +53,18 @@ def servicio(db_session):
     return PartidaService(PartidaRepository(db_session))
 
 
+def cabecera(jugador_id):
+    return {"Authorization": f"Bearer {crear_token_acceso(jugador_id)}"}
+
+
 def crear_partida_por_api(client, creador_id):
-    respuesta = client.post("/partidas", json={"creador_id": creador_id})
+    respuesta = client.post("/partidas", headers=cabecera(creador_id))
     assert respuesta.status_code == 201
     return respuesta.json()["id"]
 
 
 def unirse_por_api(client, partida_id, jugador_id):
-    return client.post(f"/partidas/{partida_id}/unirse", json={"jugador_id": jugador_id})
+    return client.post(f"/partidas/{partida_id}/unirse", headers=cabecera(jugador_id))
 
 
 def llenar_partida(client, db_session):
@@ -219,14 +223,13 @@ def test_unirse_a_partida_inexistente_da_404(client, db_session):
     assert "no existe" in respuesta.json()["detail"]
 
 
-def test_unirse_con_un_jugador_inexistente_da_404(client, db_session):
+def test_unirse_con_el_token_de_un_jugador_inexistente_da_401(client, db_session):
     (ana,) = crear_jugadores(db_session, 1)
     partida = crear_partida_por_api(client, ana)
 
     respuesta = unirse_por_api(client, partida, 999)
 
-    assert respuesta.status_code == 404
-    assert respuesta.json()["detail"] == "Jugador no encontrado"
+    assert respuesta.status_code == 401
 
 
 def test_unirse_a_una_partida_llena_da_409(client, db_session):
@@ -261,13 +264,23 @@ def test_unirse_a_una_partida_en_curso_da_409(client, db_session):
     assert "ya no acepta jugadores" in respuesta.json()["detail"]
 
 
-def test_unirse_sin_indicar_el_jugador_da_422(client, db_session):
+def test_unirse_sin_sesion_da_401(client, db_session):
     (ana,) = crear_jugadores(db_session, 1)
     partida = crear_partida_por_api(client, ana)
 
-    respuesta = client.post(f"/partidas/{partida}/unirse", json={})
+    respuesta = client.post(f"/partidas/{partida}/unirse")
 
-    assert respuesta.status_code == 422
+    assert respuesta.status_code == 401
+
+
+def test_unirse_usa_el_jugador_del_token_y_no_el_del_cuerpo(client, db_session):
+    ana, beto, caro = crear_jugadores(db_session, 3)
+    partida = crear_partida_por_api(client, ana)
+
+    client.post(f"/partidas/{partida}/unirse", json={"jugador_id": caro}, headers=cabecera(beto))
+
+    assert PartidaRepository(db_session).es_participante(partida, beto)
+    assert not PartidaRepository(db_session).es_participante(partida, caro)
 
 
 #canal en tiempo real: /ws/partidas/{id}

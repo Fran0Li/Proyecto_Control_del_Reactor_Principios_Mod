@@ -36,7 +36,8 @@ def partida_de_ana(client, db_session):
     ana = UsuarioRepository(db_session).crear(
         Usuario(nombre_usuario="ana", correo="ana@mail.com", contrasena_hash="hash")
     )
-    respuesta = client.post("/partidas", json={"creador_id": ana.id})
+    token = crear_token_acceso(ana.id, ana.version_sesion)
+    respuesta = client.post("/partidas", headers={"Authorization": f"Bearer {token}"})
     return respuesta.json()["id"], ana
 
 

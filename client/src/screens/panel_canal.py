@@ -137,7 +137,7 @@ class PanelCanal:
     def draw(self, screen: pygame.Surface, centro_x: int, y: int, con_boton: bool = True) -> None:
         if self.canal is None:
             return
-        linea = f"Canal: {self._texto_estado()} - jugadores en línea: {self.conectados}"
+        linea = f"Canal: {self._texto_estado()} - jugadores en línea: {self.cantidad_conectados()}"
         texto = self.fuente.render(linea, True, COLOR_TEXTO)
         screen.blit(texto, texto.get_rect(center=(centro_x, y)))
         if not con_boton:

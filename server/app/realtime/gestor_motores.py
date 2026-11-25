@@ -10,10 +10,15 @@ from app.realtime.escenarios import crear_escenario
 from app.realtime.evaluador_logros import EvaluadorLogros, FabricaSesiones
 from app.realtime.eventos import PARTIDA_FINALIZADA, EventoPartida
 from app.realtime.eventos_especiales import ProgramadorEventos
-from app.realtime.motor_partida import EN_CURSO, FINALIZADA, MotorPartida
+from app.realtime.motor_partida import EN_CURSO, ESPERANDO, FINALIZADA, MotorPartida
 from app.realtime.notificador_websocket import NotificadorWebSocket
 from app.realtime.registro_eventos import RegistroEventos
 from app.realtime.retos import GestorRetos
+from app.repositories.partida_repository import PartidaRepository
+
+# Si todos se van de una partida que no se ha iniciado, se espera este tiempo (por si alguien
+# recarga la página o vuelve) y, si sigue vacía, se cierra para que nadie quede trabado en ella.
+ESPERA_ANTES_DE_CERRAR_S = 60.0
 
 
 class GestorMotores:
@@ -24,6 +29,8 @@ class GestorMotores:
         self._fabrica_sesiones = fabrica_sesiones
         self._motores: dict[int, MotorPartida] = {}
         self._resultados_guardados: set[int] = set()  # partidas terminadas ya guardadas
+        self.espera_antes_de_cerrar_s = ESPERA_ANTES_DE_CERRAR_S
+        self._cierres: dict[int, asyncio.Task] = {}  # partidas vacías por cerrar
 
     def obtener(self, partida_id: int, escenario: str | None = None) -> MotorPartida:
         """Devuelve el motor de la partida; si no existe, lo crea y lo pone en marcha.
@@ -71,6 +78,30 @@ class GestorMotores:
         if self._motores.get(partida_id) is motor:
             del self._motores[partida_id]
         await motor.detener()
+        if motor.estado_partida == ESPERANDO:
+            self._programar_cierre(partida_id)
+
+    def _programar_cierre(self, partida_id: int) -> None:
+        anterior = self._cierres.get(partida_id)
+        if anterior is not None and not anterior.done():
+            return
+        self._cierres[partida_id] = asyncio.get_running_loop().create_task(
+            self._cerrar_si_sigue_vacia(partida_id)
+        )
+
+    async def _cerrar_si_sigue_vacia(self, partida_id: int) -> None:
+        """Cierra en la base una partida sin iniciar que se quedó sin nadie conectado."""
+        try:
+            await asyncio.sleep(self.espera_antes_de_cerrar_s)
+            if self._canales.conectados(partida_id) or partida_id in self._motores:
+                return  # alguien volvió
+            await asyncio.to_thread(self._cerrar_en_base, partida_id)
+        finally:
+            self._cierres.pop(partida_id, None)
+
+    def _cerrar_en_base(self, partida_id: int) -> bool:
+        with self._fabrica_sesiones() as sesion:
+            return PartidaRepository(sesion).cerrar_si_sigue_esperando(partida_id)
 
     async def al_evento(self, evento: EventoPartida) -> None:
         if evento.tipo == PARTIDA_FINALIZADA:
@@ -81,6 +112,9 @@ class GestorMotores:
     def limpiar(self) -> None:
         """Olvida todos los motores (para las pruebas)."""
         self._motores.clear()
+        for tarea in self._cierres.values():
+            tarea.cancel()
+        self._cierres.clear()
         self._resultados_guardados.clear()
 
 

@@ -28,7 +28,7 @@ services:
       - ./server/app:/app/app   # recarga automática al editar el código
       - ./server/alembic:/app/alembic   # migraciones nuevas sin reconstruir la imagen
     # Aplica las migraciones pendientes y después levanta la API
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "alembic upgrade head && python -m app.scripts.cerrar_partidas_activas && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:
   pgdata:

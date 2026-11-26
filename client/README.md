@@ -5,15 +5,18 @@ funcionando en los dos están en `docs/adr/0002-cliente-movil-pygbag.md`.
 
 ## Correr en la PC
 
-**Requisito: Python 3.12.** Es la versión del CI. Con Python 3.14 el jugador se une a la partida pero
-el canal queda "sin conexión" y la arena en blanco, porque `websockets` 13 no soporta 3.14. Si tu
-Python es otro, creá un entorno con 3.12 una sola vez:
+**Requisito: Python 3.12**, la versión con la que se prueba (CI); `jugar.ps1` avisa si es otra.
+Si tu Python es otro y algo falla, creá un entorno con 3.12 una sola vez:
 
 ```
 py -3.12 -m venv .venv312
 .\.venv312\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
+
+El canal de la partida en la nube (`wss://`) valida el certificado con los certificados de `certifi`
+(los mismos que usa `requests`), no con los de Windows: en algunas compus el almacén de Windows
+trae una raíz vencida y la conexión fallaba con `SSLCertVerificationError` aunque el login funcionara.
 
 En Windows, lo más fácil es el script: instala lo que falte, pone el puerto del control y avisa si
 el backend no responde.

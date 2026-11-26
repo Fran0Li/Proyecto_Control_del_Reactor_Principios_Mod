@@ -192,3 +192,13 @@ def test_navegador_envia_el_mensaje_como_literal_de_javascript(ventana):
 def test_navegador_cerrar_cierra_el_websocket(ventana):
     ConexionNavegador("ws://x/y").cerrar()
     assert ".close()" in ventana.codigos[-1]
+
+
+def test_con_wss_usa_los_certificados_de_certifi():
+    contexto = ConexionEscritorio("wss://servidor.com/ws/prueba")._contexto_ssl()
+
+    assert contexto is not None and contexto.verify_mode.name == "CERT_REQUIRED"
+
+
+def test_con_ws_local_no_usa_ssl():
+    assert ConexionEscritorio("ws://127.0.0.1:8000/ws/prueba")._contexto_ssl() is None

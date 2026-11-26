@@ -139,7 +139,9 @@ La partida termina sola a los 5 minutos o cuando alguien llega a 500 puntos. Pri
 
 Tocá **Volver al lobby** para jugar otra.
 
-📷 *Ceremonia de victoria.*
+![Ceremonia de victoria](img/ceremonia.jpg)
+
+*La ceremonia: ganador, podio con trofeo, confeti, puntaje de cada jugador, acciones, penalizaciones y los logros y récords de la partida.*
 
 ![Ranking global](img/ranking.jpg)
 
@@ -168,7 +170,9 @@ La cuenta de administrador la crea el equipo desde el servidor; no se puede pedi
 - **Usuarios:** lista de cuentas con **Bloquear** y **Desbloquear**. Una cuenta bloqueada pierde la sesión y al intentar entrar ve *"Tu cuenta fue bloqueada por un administrador"*.
 - **Partidas activas:** cerrar una partida que quedó abierta. Si estaba en curso, termina y se guardan los resultados como en cualquier final.
 
-📷 *Pantalla de administración.*
+![Pantalla de administración](img/administracion.jpg)
+
+*Administración: estadísticas arriba, mejores puntajes a la derecha, usuarios con Bloquear o Desbloquear y partidas activas con Cerrar.*
 
 ## 10. Problemas comunes
 

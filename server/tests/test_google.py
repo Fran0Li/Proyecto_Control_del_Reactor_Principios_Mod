@@ -89,6 +89,16 @@ def test_iniciar_sin_credenciales_configuradas_avisa(client, proveedor):
     assert respuesta.status_code == 503
 
 
+def test_sin_credenciales_el_juego_deja_de_esperar(client, proveedor):
+    proveedor.configurado = False
+    client.get("/auth/google/iniciar", params={"sesion": SESION})
+
+    respuesta = client.get("/auth/google/resultado", params={"sesion": SESION})
+
+    assert respuesta.status_code == 400
+    assert "no está configurado" in respuesta.json()["detail"]
+
+
 def test_sesion_con_formato_raro_se_rechaza(client):
     respuesta = client.get("/auth/google/resultado", params={"sesion": "corta"})
 

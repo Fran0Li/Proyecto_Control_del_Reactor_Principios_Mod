@@ -70,6 +70,29 @@ else {
 $servidor = if ($Nube) { $URL_NUBE } else { $URL_LOCAL }
 Write-Host "Servidor: $servidor" -ForegroundColor Cyan
 
+# --- Versión de Python ------------------------------------------------------------------------
+# El cliente se prueba con Python 3.12 (el CI usa 3.12). Con 3.14 la librería websockets 13 no
+# conecta el canal de la partida: el jugador se une pero queda "sin conexión" y la arena en blanco.
+$versionPython = python -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')" 2>$null
+if (-not $versionPython) {
+    Write-Host "No se encontró Python. Instalá Python 3.12 desde python.org (marcá 'Add to PATH')." -ForegroundColor Red
+    exit 1
+}
+if ($versionPython -eq "3.13") {
+    Write-Host "Aviso: Python 3.13. El juego se prueba con 3.12; si algo falla, usá un entorno con 3.12." -ForegroundColor Yellow
+}
+elseif ($versionPython -ne "3.12") {
+    Write-Host ""
+    Write-Host "Python $versionPython no es compatible con el cliente: el canal de la partida no conecta." -ForegroundColor Red
+    Write-Host "Creá un entorno con Python 3.12 (una sola vez) y volvé a correr el script:" -ForegroundColor Red
+    Write-Host "    py -3.12 -m venv .venv312" -ForegroundColor Yellow
+    Write-Host "    .\.venv312\Scripts\Activate.ps1" -ForegroundColor Yellow
+    Write-Host "    pip install -r requirements.txt" -ForegroundColor Yellow
+    Write-Host "Si 'py -3.12' no existe, instalá Python 3.12 desde python.org." -ForegroundColor Red
+    exit 1
+}
+Write-Host "Python  : $versionPython" -ForegroundColor Cyan
+
 # --- Dependencias -----------------------------------------------------------------------------
 python -c "import pygame, requests, serial, websockets" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {

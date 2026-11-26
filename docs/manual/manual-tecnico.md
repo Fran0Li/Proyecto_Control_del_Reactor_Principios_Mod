@@ -26,7 +26,15 @@ Vistas y diagramas: [Arquitectura Sprint 2](https://dev.azure.com/proyecto-contr
 ## 2. Requisitos
 
 - **Para el backend:** Docker Desktop.
-- **Para el cliente de escritorio:** Python 3.12 (Windows, Linux o Mac).
+- **Para el cliente de escritorio:** **Python 3.12** (Windows, Linux o Mac). Es la versión del CI y la única probada. Con **Python 3.14 no funciona**: el jugador se une a la partida, pero el canal en tiempo real queda "sin conexión" y la arena en blanco, porque la librería `websockets` 13 no soporta esa versión. Con 3.13 debería andar, pero no está probado. `jugar.ps1` revisa la versión y no arranca si no es 3.12 o 3.13. Si la compu tiene otra, se crea un entorno con 3.12 una sola vez:
+
+  ```powershell
+  py -3.12 -m venv .venv312
+  .\.venv312\Scripts\Activate.ps1
+  pip install -r requirements.txt
+  ```
+
+  En el navegador y el celular no hace falta Python: se juega desde el dominio.
 - **Para el control:** Arduino Uno con el firmware cargado y el Arduino IDE (solo para cargarlo).
 - **Para desplegar:** cuenta de Azure (se usó Azure for Students) y acceso al repositorio de GitHub.
 
@@ -165,6 +173,7 @@ El **Monitor Serie del Arduino IDE tiene que estar cerrado** mientras se juega: 
 | Síntoma | Causa probable | Qué hacer |
 | --- | --- | --- |
 | `jugar.ps1` dice que el backend no responde | Docker no está corriendo, o la VM está apagada (con `-Nube`) | `docker compose up`, o encender la VM en el portal de Azure |
+| En la compu: se une a la partida pero sale "Canal: sin conexión — jugadores en línea: 0" y al entrar a la arena la ventana queda en blanco | Python 3.14 (la línea de pygame-ce en la terminal dice la versión) | Crear el entorno con Python 3.12 de la sección 2; en el celular o el navegador sí funciona |
 | El control no mueve al personaje | Monitor Serie abierto, otro puerto COM o cable suelto | Cerrar el Arduino IDE; probar `-Puerto COM3`; revisar en el Administrador de dispositivos |
 | "El jugador ya está en una partida activa" | Quedó abierta una partida de una prueba anterior | Esperar 60 s si nadie está conectado, o usar el script de cerrar partidas |
 | No llegan los correos | `SMTP_*` vacío o mal escrito | Revisar con el comando de `docs/despliegue.md`; con SMTP vacío los correos salen en el log del servidor |

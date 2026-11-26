@@ -179,4 +179,5 @@ La cuenta de administrador la crea el equipo desde el servidor; no se puede pedi
 | No puedo crear partida: "ya está en una partida activa" | Esperá un minuto: una partida sin iniciar y sin nadie conectado se cierra sola |
 | El botón sigue gris con todos unidos | Alguien se salió del lobby y su conexión se cerró: que vuelva a unirse desde **Buscar partidas** |
 | En el celular no sale el teclado o se ve una versión vieja | Recargar la página |
+| En la compu sale "Canal: sin conexión" o la arena queda en blanco | La compu tiene una versión de Python que no es la del juego: ver la sección 2 del [Manual técnico](manual-tecnico.md). Mientras tanto se puede jugar desde el navegador o el celular |
 | El control físico no mueve al personaje | Ver la sección de control físico del [Manual técnico](manual-tecnico.md); mientras tanto se puede jugar con el teclado |

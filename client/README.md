@@ -5,6 +5,16 @@ funcionando en los dos están en `docs/adr/0002-cliente-movil-pygbag.md`.
 
 ## Correr en la PC
 
+**Requisito: Python 3.12.** Es la versión del CI. Con Python 3.14 el jugador se une a la partida pero
+el canal queda "sin conexión" y la arena en blanco, porque `websockets` 13 no soporta 3.14. Si tu
+Python es otro, creá un entorno con 3.12 una sola vez:
+
+```
+py -3.12 -m venv .venv312
+.\.venv312\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
 En Windows, lo más fácil es el script: instala lo que falte, pone el puerto del control y avisa si
 el backend no responde.
 

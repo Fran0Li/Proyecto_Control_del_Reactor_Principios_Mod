@@ -6,8 +6,6 @@
 
 **Dónde se juega:** https://control-reactor.northcentralus.cloudapp.azure.com (celular o navegador), o con el cliente de escritorio para usar el control físico (ver [Manual técnico](manual-tecnico.md)).
 
-> 📷 = lugar para una captura de la demo interna del 25/11.
-
 ## 1. De qué se trata
 
 Hasta 4 jugadores compiten en una arena con un **reactor de energía** en el centro. Gana quien junte más puntos antes de que se acabe el tiempo (5 minutos) o quien llegue primero a 500 puntos. En el camino hay obstáculos, trampas, guardianes que te persiguen y eventos especiales.
@@ -21,7 +19,9 @@ Hasta 4 jugadores compiten en una arena con un **reactor de energía** en el cen
 
 El correo y el nombre de usuario no se pueden repetir: si ya están registrados, el juego te avisa.
 
-📷 *Registro en el celular con el teclado abierto.*
+![Inicio de sesión desde el celular](img/cel-login.jpg)
+
+*En el celular: al tocar un campo se abre el teclado del teléfono.*
 
 ![Correo de verificación que llega al registrarse](img/correo-verificacion.png)
 
@@ -83,7 +83,9 @@ En el celular, al primer toque el juego pasa a pantalla completa (en Android; Sa
 
 *Después de tocar Unirse: "Te uniste a la partida" y el botón Entrar a la arena.*
 
-📷 *Botón gris "Esperando jugadores" y luego azul "Iniciar partida".*
+![Unirse desde el celular](img/cel-unirse.jpg)
+
+*Lo mismo desde el celular, con la cantidad de jugadores en línea.*
 
 ## 6. Cómo se juega
 
@@ -99,7 +101,9 @@ Otras teclas en la compu: **M** silencia o activa la música y los sonidos; **Es
 
 Si usás el control físico y se desconecta, sale un aviso naranja *"Control desconectado. Seguí con el teclado; se reconecta solo."* y tu personaje se detiene. Al volver a conectarlo sale un aviso verde *"Control conectado."*.
 
-📷 *Arena con los 4 jugadores y el HUD.*
+![Arena desde el celular](img/arena-puntos-dobles.jpg)
+
+*Arena en el celular: tu personaje dice "Vos", el reactor está al centro, los guardianes en morado, los botones táctiles abajo y el HUD arriba a la derecha.*
 
 ### Cómo se ganan y se pierden puntos
 
@@ -131,7 +135,9 @@ A los 30 segundos de iniciar sale el primero y después uno cada 30 a 45 segundo
 
 Arriba se ven el **reloj** (se pone rojo en los últimos 30 segundos), la **tabla de posiciones** en tiempo real y el **evento activo**.
 
-📷 *Un evento especial en el HUD.*
+![Evento Invasión en el HUD](img/arena-invasion.jpg)
+
+*El evento activo y los segundos que le quedan aparecen debajo de la tabla de posiciones (en la captura anterior, Puntos dobles).*
 
 ## 7. Fin de la partida y ceremonia
 

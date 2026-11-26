@@ -17,7 +17,7 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`. La numeración sigue a
 los guardianes (US-15, CP-245 a CP-264) y los eventos especiales (US-16). Su rango del Sprint 3 es
 CP-215 a CP-264. Como los guardianes ya ocupan CP-245 a CP-264, escenarios, celdas y obstáculos usan
 CP-215 a CP-244, y los eventos especiales y la arena visual siguen desde CP-346 (el rol C llegó a
-CP-345). Los casos de tipo **A** del Sprint 3 se ejecutan a mano en la demo interna del 25/11 (ver
+CP-345). Los casos de tipo **A** del Sprint 3 se ejecutaron a mano en la demo interna del 25/11 (ver
 [Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación)).
 
 ## Resumen
@@ -28,13 +28,13 @@ CP-345). Los casos de tipo **A** del Sprint 3 se ejecutan a mano en la demo inte
 | US-08 Unirse a una partida | 27 | 27 | — |
 | US-21 Guardado persistente de datos | 10 | 10 | — |
 | US-25 Movimiento por el mapa | 35 | 35 | — |
-| US-15 Guardianes y estados del jugador (CP-245 a CP-264) | 20 | 17 | 3 (CP-262, CP-263, CP-264) |
-| US-09 Escenarios (CP-215 a CP-223) | 9 | 8 | 1 (CP-223) |
-| US-13 Celdas de energía (CP-224 a CP-232) | 9 | 8 | 1 (CP-232) |
-| US-14 Obstáculos (CP-233 a CP-244) | 12 | 11 | 1 (CP-244) |
-| US-16 Eventos especiales (CP-346 a CP-359) | 14 | 13 | 1 (CP-359) |
+| US-15 Guardianes y estados del jugador (CP-245 a CP-264) | 20 | 20 | — |
+| US-09 Escenarios (CP-215 a CP-223) | 9 | 9 | — |
+| US-13 Celdas de energía (CP-224 a CP-232) | 9 | 9 | — |
+| US-14 Obstáculos (CP-233 a CP-244) | 12 | 12 | — |
+| US-16 Eventos especiales (CP-346 a CP-359) | 14 | 14 | — |
 | Arena visual (CP-360 y CP-361) | 2 | 2 | — |
-| **Total** | **150** | **143** | **7** |
+| **Total** | **150** | **150** | **0** |
 
 
 ## US-07 Creación de partida
@@ -172,9 +172,9 @@ jugador queda protegido unos segundos antes de poder ser golpeado otra vez (CU-1
 | CP-259 | Escudado no es penalizado (CU-11, E1) | Jugador `escudado`, guardián encima | 1 tick | No pierde puntos | OK | I | `s/test_guardianes.py::TestPenalizacionEnElMotor::test_el_jugador_escudado_no_es_penalizado` |
 | CP-260 | El estado y el aviso llegan a los clientes | Partida con guardianes | Un guardián se mueve y alcanza a un jugador | El `estado` trae `guardianes` y `jugadores[].estado`; se emite `jugador_penalizado` con jugador, guardián, puntos y estado; sin guardianes no hay estados de más | OK | I | `s/test_guardianes.py::TestPenalizacionEnElMotor::test_el_estado_trae_la_lista_de_guardianes`, `s/test_guardianes.py::TestPenalizacionEnElMotor::test_sin_guardianes_la_lista_va_vacia`, `s/test_guardianes.py::TestPenalizacionEnElMotor::test_los_guardianes_se_mueven_y_avisan_a_los_clientes`, `s/test_guardianes.py::TestPenalizacionEnElMotor::test_la_penalizacion_se_avisa_como_evento`, `s/test_guardianes.py::TestPenalizacionEnElMotor::test_sin_guardianes_no_hay_cambios_ni_avisos`, `s/test_guardianes.py::TestPenalizacionEnElMotor::test_un_guardian_que_patrulla_termina_alcanzando_al_jugador` |
 | CP-261 | El cliente dibuja guardianes y estados | Estado con guardianes y jugadores en distintos estados | Dibujar la arena | Guardián como círculo morado con borde oscuro; jugador rojo normal, gris aturdido y azul escudado; sin guardianes no falla | OK | U | `c/test_dibujo_guardianes.py::test_el_guardian_es_un_circulo_morado_con_borde_oscuro`, `c/test_dibujo_guardianes.py::test_no_dibuja_fuera_del_radio`, `c/test_dibujo_guardianes.py::test_dibuja_varios_guardianes`, `c/test_dibujo_guardianes.py::test_sin_guardianes_no_falla`, `c/test_dibujo_guardianes.py::test_el_jugador_normal_es_rojo`, `c/test_dibujo_guardianes.py::test_el_jugador_aturdido_es_gris`, `c/test_dibujo_guardianes.py::test_el_jugador_escudado_es_azul` |
-| CP-262 | Ver al guardián moverse en el juego | Servidor con base nueva; dos jugadores en la arena; un guardián en la partida | Entrar a la arena | Un círculo morado se mueve solo por su ruta y los dos jugadores lo ven en el mismo lugar | Pendiente | A | Manual (ver prueba punta a punta, paso 6) |
-| CP-263 | Ser alcanzado por un guardián en el juego | Jugador con puntos | Caminar hasta tocar al guardián | El círculo del jugador se pone gris, no se mueve 3 s y su puntaje baja 5; el otro jugador lo ve gris | Pendiente | A | Manual (ver prueba punta a punta, pasos 7 y 8) |
-| CP-264 | Recuperarse del golpe en el juego | Jugador aturdido | Esperar | A los 3 s el círculo se pone azul y puede moverse; el guardián no lo vuelve a penalizar durante 2 s; después vuelve a rojo | Pendiente | A | Manual (ver prueba punta a punta, paso 9) |
+| CP-262 | Ver al guardián moverse en el juego | Servidor con base nueva; dos jugadores en la arena; un guardián en la partida | Entrar a la arena | Un círculo morado se mueve solo por su ruta y los dos jugadores lo ven en el mismo lugar | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 6) |
+| CP-263 | Ser alcanzado por un guardián en el juego | Jugador con puntos | Caminar hasta tocar al guardián | El círculo del jugador se pone gris, no se mueve 3 s y su puntaje baja 5; el otro jugador lo ve gris | OK (demo 25/11) | A | Manual (ver prueba punta a punta, pasos 7 y 8) |
+| CP-264 | Recuperarse del golpe en el juego | Jugador aturdido | Esperar | A los 3 s el círculo se pone azul y puede moverse; el guardián no lo vuelve a penalizar durante 2 s; después vuelve a rojo | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 9) |
 ## US-09 Escenarios
 
 **Criterios de aceptación (enunciado):** el juego tiene cinco escenarios (laboratorio, estación
@@ -192,7 +192,7 @@ con ventaja.
 | CP-220 | Siempre hay camino a los otros inicios, al reactor y a las celdas | Cada escenario | Buscar camino en una cuadrícula | Hay camino desde cada inicio a los demás, al reactor y a todas las celdas | OK | U | `s/test_escenarios.py::test_siempre_hay_camino_a_los_otros_puntos_de_inicio_y_al_reactor`, `s/test_escenarios.py::test_todas_las_celdas_se_pueden_alcanzar` |
 | CP-221 | El motor manda el escenario, el mapa y los guardianes | Motor con escenario | Pedir el estado | El estado trae `escenario`, `arena.obstaculos` y `guardianes` del escenario; sin escenario no trae el campo | OK | I | `s/test_escenarios.py::test_el_motor_manda_el_escenario_el_mapa_y_los_guardianes`, `s/test_escenarios.py::test_sin_escenario_el_estado_no_trae_el_campo` |
 | CP-222 | El gestor crea el motor con el escenario pedido y cada partida tiene sus guardianes | Gestor de motores | `obtener(id, escenario)` en dos partidas del mismo escenario | Cada motor usa su escenario y los guardianes no se comparten | OK | I | `s/test_escenarios.py::test_el_gestor_crea_el_motor_con_el_escenario_pedido`, `s/test_escenarios.py::test_dos_partidas_del_mismo_escenario_no_comparten_guardianes` |
-| CP-223 | Jugar en cada uno de los cinco mapas | Servidor y cliente corriendo, dos jugadores | Crear una partida con cada escenario y jugarla un rato | Se ve el fondo, los obstáculos, las celdas y los guardianes de ese mapa, y los mapas se distinguen entre sí | Pendiente | A | Manual (ver prueba punta a punta, paso 10) |
+| CP-223 | Jugar en cada uno de los cinco mapas | Servidor y cliente corriendo, dos jugadores | Crear una partida con cada escenario y jugarla un rato | Se ve el fondo, los obstáculos, las celdas y los guardianes de ese mapa, y los mapas se distinguen entre sí | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 10) |
 
 ## US-13 Celdas de energía
 
@@ -210,7 +210,7 @@ toca una la recoge y recibe puntos; la celda reaparece después de un tiempo. De
 | CP-229 | Recoger una celda suma sus puntos y se acumulan | Partida en el motor | El jugador toca una celda y luego otras | El puntaje sube lo que vale cada celda; cada jugador recoge la suya | OK | I | `s/test_celdas.py::test_el_jugador_que_toca_una_celda_suma_sus_puntos`, `s/test_celdas.py::test_los_puntos_se_acumulan_con_varias_celdas`, `s/test_celdas.py::test_cada_jugador_recoge_su_celda` |
 | CP-230 | La celda recogida desaparece del estado, vuelve y se avisa a los observadores | Partida con celdas | Recoger y esperar la reposición | `arena.celdas` pierde la celda y luego la recupera; se avisa al recoger y al volver, aunque nadie se mueva | OK | I | `s/test_celdas.py::test_la_celda_recogida_desaparece_del_estado`, `s/test_celdas.py::test_la_celda_vuelve_al_estado_despues_de_la_reposicion`, `s/test_celdas.py::test_recoger_una_celda_avisa_a_los_observadores`, `s/test_celdas.py::test_que_la_celda_vuelva_tambien_avisa_aunque_nadie_se_mueva` |
 | CP-231 | El cliente dibuja las celdas | Cliente | Estado con celdas y sin ellas | Se dibujan todas con su sprite (o círculo amarillo sin imagen); una recogida deja de dibujarse; sin celdas solo se ve el fondo | OK | U | `c/test_arena_celdas.py::test_se_dibujan_todas_las_celdas`, `c/test_arena_celdas.py::test_una_celda_recogida_deja_de_dibujarse`, `c/test_arena_sprites.py::test_la_celda_se_dibuja_con_su_sprite` |
-| CP-232 | Recoger una celda en el juego | Partida iniciada en la arena | Caminar hasta tocar una celda | La celda desaparece, el puntaje sube 5, a los 10 s reaparece y el otro jugador lo ve igual | Pendiente | A | Manual (ver prueba punta a punta, paso 11) |
+| CP-232 | Recoger una celda en el juego | Partida iniciada en la arena | Caminar hasta tocar una celda | La celda desaparece, el puntaje sube 5, a los 10 s reaparece y el otro jugador lo ve igual | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 11) |
 
 ## US-14 Obstáculos
 
@@ -231,7 +231,7 @@ mapa y empujan al jugador.
 | CP-241 | El jugador puede moverse mientras lo empujan; solo la barrera móvil empuja | Jugador empujado | Presionar una dirección; una puerta y una barrera fija encima | Se sigue moviendo; las puertas y las barreras fijas no empujan; quien ya está libre no se toca | OK | I | `s/test_obstaculos.py::TestEmpujeDeLaBarreraMovil::test_el_jugador_puede_moverse_mientras_lo_empujan`, `s/test_obstaculos.py::TestEmpujeDeLaBarreraMovil::test_las_puertas_y_barreras_fijas_no_empujan`, `s/test_obstaculos.py::TestEmpujeDeLaBarreraMovil::test_no_toca_a_los_que_ya_estan_libres` |
 | CP-242 | Cada mapa trae sus obstáculos y las barreras móviles no estorban | Los cinco escenarios | Revisar los tipos y recorrer el ciclo de las barreras móviles | Laboratorio y centro tienen barreras móviles, la estación tiene puertas y la planta trampas; las móviles nunca salen de la arena ni tapan el reactor, un inicio o una celda | OK | U | `s/test_escenarios.py::test_laboratorio_y_centro_de_investigacion_tienen_barreras_moviles`, `s/test_escenarios.py::test_la_estacion_espacial_tiene_puertas_y_la_planta_industrial_trampas`, `s/test_escenarios.py::test_las_barreras_moviles_nunca_salen_de_la_arena`, `s/test_escenarios.py::test_las_barreras_moviles_nunca_tocan_el_reactor`, `s/test_escenarios.py::test_las_barreras_moviles_nunca_tapan_un_punto_de_inicio_ni_una_celda` |
 | CP-243 | El cliente dibuja muro, trampa y puerta con sus sprites; la puerta abierta se ve oscura | Cliente | Dibujar cada tipo | Muro en cuadros de 30 px, trampa con su sprite, puerta normal si está cerrada y oscura si está abierta (mismo rectángulo); sin imagen vuelve a sus colores | OK | U | `c/test_dibujo_obstaculos.py::test_la_barrera_se_rellena_con_el_sprite_del_muro_en_cuadros_de_30`, `c/test_dibujo_obstaculos.py::test_la_trampa_se_rellena_con_su_sprite_en_cuadros_de_30`, `c/test_dibujo_obstaculos.py::test_la_puerta_abierta_es_el_mismo_sprite_pero_mas_oscuro`, `c/test_dibujo_obstaculos.py::test_sin_imagen_la_puerta_vuelve_a_sus_colores` |
-| CP-244 | Ver los obstáculos en el juego | Partida en la arena con barreras móviles, trampas y puertas | Caminar por el mapa | La barrera bloquea, la trampa frena, la puerta se oscurece al abrirse y la barrera móvil empuja aunque uno esté quieto o camine hacia ella | Pendiente | A | Manual (ver prueba punta a punta, paso 12) |
+| CP-244 | Ver los obstáculos en el juego | Partida en la arena con barreras móviles, trampas y puertas | Caminar por el mapa | La barrera bloquea, la trampa frena, la puerta se oscurece al abrirse y la barrera móvil empuja aunque uno esté quieto o camine hacia ella | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 12) |
 
 ## US-16 Eventos especiales
 
@@ -256,7 +256,7 @@ ven en el cuadro de posiciones. Numeración desde CP-346 porque el rango CP-215 
 | CP-356 | Los efectos desaparecen al terminar el evento o la partida | Invasión y puntos dobles en marcha | Esperar el fin del evento; terminar la partida a la mitad | Los invasores se van y quedan los guardianes del mapa; el multiplicador vuelve a 1; sin `evento`; una invasión nueva no acumula invasores | OK | I | `s/test_eventos_especiales.py::TestInvasion::test_al_terminar_el_evento_desaparecen_y_quedan_los_del_mapa`, `s/test_eventos_especiales.py::TestInvasion::test_si_la_partida_termina_en_plena_invasion_los_invasores_se_van`, `s/test_eventos_especiales.py::TestInvasion::test_cada_invasion_trae_invasores_nuevos_sin_acumularse`, `s/test_eventos_especiales.py::TestPuntosDobles::test_si_la_partida_termina_con_el_evento_activo_se_deshace`, `s/test_eventos_especiales.py::TestPuntosDobles::test_si_el_evento_dura_mas_que_la_partida_no_vuelve_a_salir`, `s/test_eventos_especiales.py::TestTiempos::test_una_partida_nueva_vuelve_a_esperar_los_30_segundos` |
 | CP-357 | El cuadro de posiciones muestra el nombre del evento y los segundos | Cliente | Dibujar el HUD con y sin `partida.evento` | Con evento el cuadro crece con una fila (nombre y "N s"); sin evento queda igual | OK | U | `c/test_hud_partida.py::test_el_evento_se_escribe_con_su_nombre_y_los_segundos`, `c/test_hud_partida.py::test_el_cuadro_crece_solo_cuando_hay_un_evento` |
 | CP-358 | Cada evento se pinta de su color | Cliente | Dibujar el HUD con cada evento | Verde para puntos dobles, rojo para invasión y celeste para otro; sin evento no hay color de evento | OK | U | `c/test_hud_partida.py::test_cada_evento_se_pinta_de_su_color`, `c/test_hud_partida.py::test_un_evento_desconocido_usa_el_color_por_defecto`, `c/test_hud_partida.py::test_sin_evento_no_hay_color_de_evento` |
-| CP-359 | Ver los dos eventos en una partida real | Partida iniciada con el cuadro de posiciones visible | Jugar más de 90 s | Sale "Puntos dobles" (verde) o "Invasión" (rojo) con los segundos; con puntos dobles una celda da 10 y el reactor 20; con invasión aparecen dos guardianes que persiguen; al terminar el evento todo vuelve a lo normal | Pendiente | A | Manual (ver prueba punta a punta, paso 13) |
+| CP-359 | Ver los dos eventos en una partida real | Partida iniciada con el cuadro de posiciones visible | Jugar más de 90 s | Sale "Puntos dobles" (verde) o "Invasión" (rojo) con los segundos; con puntos dobles una celda da 10 y el reactor 20; con invasión aparecen dos guardianes que persiguen; al terminar el evento todo vuelve a lo normal | OK (demo 25/11) | A | Manual (ver prueba punta a punta, paso 13) |
 
 ## Arena visual
 
@@ -296,9 +296,8 @@ Los casos de tipo **A** del Sprint 3 se hacen con una sola prueba punta a punta:
     evento con sus segundos. Para repetirlo sin esperar 30 s se puede bajar `PRIMER_EVENTO_S` en
     `server/app/realtime/eventos_especiales.py` mientras se prueba (hay que devolverlo después).
 
-Evidencia: captura o video de cada caso en la Wiki, página "Casos de prueba" del Sprint 3, y para los
-guardianes en `evidencias/cp-262-guardian.png`, `evidencias/cp-263-aturdido.png` y
-`evidencias/cp-264-escudo.png`.
+Evidencia (demo del 25/11): capturas de la arena en `../manual/img/` y consultas de la base en
+`evidencias/demo-25-11/`; el resultado de cada caso está en la Wiki, página "Casos de prueba Sprint 3".
 
 ## Regresión
 
@@ -309,7 +308,8 @@ las del cliente también. Para repetirlas: `python -m pytest -q` dentro de `serv
 
 ## Pendientes
 
-Siete casos de aceptación, que se ejecutan a mano en la demo interna del 25/11 con la prueba punta a
-punta de arriba: CP-223, CP-232, CP-244, CP-262, CP-263, CP-264 y CP-359. Se marcan **OK** con la
-captura de cada uno (`evidencias/cp-262-guardian.png`, `evidencias/cp-263-aturdido.png`,
-`evidencias/cp-264-escudo.png`, y una captura por cada uno de los demás).
+Ninguno. Los siete casos de aceptación (CP-223, CP-232, CP-244, CP-262, CP-263, CP-264 y CP-359) se
+ejecutaron en la demo interna del 25/11 en la nube, con 4 jugadores (2 en computadora y 2 en
+celular): los 150 casos están en OK. Evidencia: capturas de la arena con Puntos dobles e Invasión
+(`../manual/img/arena-puntos-dobles.jpg`, `../manual/img/arena-invasion.jpg`) y consultas de la base
+al terminar la partida (`evidencias/demo-25-11/`).

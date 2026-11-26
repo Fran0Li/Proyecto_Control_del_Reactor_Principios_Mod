@@ -21,16 +21,17 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`, `fw/` = `hardware/firm
 | --- | --- | --- | --- |
 | US-10 Mover el personaje con el control físico | CP-265 a CP-275 (11) | 11 | — |
 | US-26 Aviso de control desconectado | CP-276 a CP-285 (10) | 10 | — |
-| US-11 Extraer energía del reactor | CP-286 a CP-301 (16) | 15 | 1 (CP-301) |
-| US-27 Logros | CP-302 a CP-318 (17) | 16 | 1 (CP-314) |
-| US-27 Retos | CP-319 a CP-329 (11) | 10 | 1 (CP-329) |
-| Apoyo a otras historias | CP-330 a CP-345 (16) | 14 | 2 (CP-343, CP-345) |
-| **Total** | **81** | **76** | **5** |
+| US-11 Extraer energía del reactor | CP-286 a CP-301 (16) | 16 | — |
+| US-27 Logros | CP-302 a CP-318 (17) | 17 | — |
+| US-27 Retos | CP-319 a CP-329 (11) | 11 | — |
+| Apoyo a otras historias | CP-330 a CP-345 (16) | 16 | — |
+| **Total** | **81** | **81** | **0** |
 
-Los pendientes son de aceptación y se ejecutan a mano en la demo interna del 25/11, con dos
-jugadores en celular y dos en computadora contra la nube: CP-301 (el reactor ya se dibuja desde el
-PR #67), CP-314, CP-329, CP-343 y CP-345. Ver
-[Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación).
+Los cinco casos de aceptación que quedaban (CP-301, CP-314, CP-329, CP-343 y CP-345) se ejecutaron en
+la demo interna del 25/11 contra la nube, con dos jugadores en celular y dos en computadora (uno con
+el control físico): los 81 están en OK. Evidencia en `../evidencias/demo-25-11/` (consultas de la
+base: participaciones, eventos, retos y logros de la partida) y en las capturas del manual de
+usuario. Ver [Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación).
 
 ## US-10 Mover el personaje con el control físico
 
@@ -100,7 +101,7 @@ radio del reactor más el del jugador (60 px).
 | CP-298 | El motor avisa la extracción a los observadores | Observador suscrito | Extracción | Evento `accion_realizada` (jugador, `reactor`, 10) y después `estado_actualizado` | OK | U | `s/test_reactor.py::test_la_extraccion_avisa_la_accion_y_luego_el_estado` |
 | CP-299 | Los jugadores ven la recarga del reactor | Reactor por debajo de su capacidad | Pasa 1 s | Los estados enviados muestran la energía subiendo | OK | U | `s/test_reactor.py::test_mientras_el_reactor_se_recarga_los_jugadores_lo_ven` |
 | CP-300 | Acciones nuevas sin tocar el motor (abierto/cerrado) | Motor con una acción falsa antes del reactor | `accion` / `presionado` | Se usa la primera acción que aplica | OK | U | `s/test_reactor.py::test_el_motor_prueba_las_acciones_en_orden_y_usa_la_primera_que_aplica` |
-| CP-301 | Extraer con el botón físico de acción | Igual que CP-273; la arena dibuja el reactor (arena visual) y el HUD muestra el puntaje (US-24, listo el 19/11) | 1) Quedarse 5 s sobre el reactor sin presionar. 2) Presionar el botón de acción (D6). 3) Presionar lejos del reactor | 1) El puntaje no cambia. 2) Suma 10 y la barra del reactor baja. 3) No suma | **Pendiente** | A | Manual (procedimiento abajo) |
+| CP-301 | Extraer con el botón físico de acción | Igual que CP-273; la arena dibuja el reactor (arena visual) y el HUD muestra el puntaje (US-24, listo el 19/11) | 1) Quedarse 5 s sobre el reactor sin presionar. 2) Presionar el botón de acción (D6). 3) Presionar lejos del reactor | 1) El puntaje no cambia. 2) Suma 10 y la barra del reactor baja. 3) No suma | OK (demo 25/11) | A | Manual (procedimiento abajo) |
 
 Además, por WebSocket con dos jugadores: la acción junto al reactor le suma 10 a quien la hizo, el
 otro jugador lo ve y el reactor queda por debajo de su capacidad
@@ -147,7 +148,7 @@ real de punta a punta. La ceremonia de victoria (US-18) muestra los logros ganad
 | CP-311 | Solo el jugador autenticado ve sus logros | Ana tiene `primera_victoria`; Beto no | `GET /logros` sin token y con el token de Beto | Sin token: 401. Beto ve `primera_victoria` como no obtenido | OK | I | `s/test_logros.py::test_sin_sesion_no_se_ven_los_logros`, `s/test_logros.py::test_cada_jugador_ve_solo_sus_logros` |
 | CP-312 | El jugador ve todo el catálogo y cuáles ya ganó | Ana tiene `primera_partida` de una partida | `GET /logros` con el token de Ana | 200 con todo el catálogo; `primera_partida` con `obtenido` true y la partida; `primera_victoria` con `obtenido` false y `obtenido_en` null | OK | I | `s/test_logros.py::test_muestra_el_catalogo_con_los_obtenidos` |
 | CP-313 | La migración crea la tabla `logros_jugador` | PostgreSQL 16 con la base en la migración anterior (`b124d9b1c989`) | `alembic upgrade head`, `downgrade -1`, `upgrade head` y `alembic check` | La tabla se crea con la restricción única `uq_logro_por_jugador` (jugador y logro); baja y sube sin errores; `check` sin diferencias con los modelos | OK | I, CI | CI (paso "Migraciones (alembic)" en cada PR); bajar, volver a subir y `check`, a mano el 16/11/2026 |
-| CP-314 | Logros al terminar una partida real | Backend local, dos cuentas verificadas, la base sin logros para esas cuentas; el motor ya termina la partida (US-17, desde el 19/11) | Jugar una partida completa; el jugador 1 saca 300 de energía del reactor después de iniciar y gana | En `logros_jugador`: jugador 1 con `primera_partida`, `primera_victoria` y `energia_300`; jugador 2 con `primera_partida`; `intocable` a quien terminó con puntos sin que lo alcanzara un guardián. La ceremonia muestra los mismos logros y `GET /logros` de cada uno coincide con la tabla | **Pendiente** | A | Manual en la demo (procedimiento abajo) |
+| CP-314 | Logros al terminar una partida real | Backend local, dos cuentas verificadas, la base sin logros para esas cuentas; el motor ya termina la partida (US-17, desde el 19/11) | Jugar una partida completa; el jugador 1 saca 300 de energía del reactor después de iniciar y gana | En `logros_jugador`: jugador 1 con `primera_partida`, `primera_victoria` y `energia_300`; jugador 2 con `primera_partida`; `intocable` a quien terminó con puntos sin que lo alcanzara un guardián. La ceremonia muestra los mismos logros y `GET /logros` de cada uno coincide con la tabla | OK (demo 25/11) | A | Manual en la demo (procedimiento abajo) |
 | CP-315 | Lo de antes de iniciar la partida no cuenta para los logros | Ana en la partida, todavía `esperando` | 30 extracciones de práctica; se inicia la partida; 1 extracción más y fin | Su energía del reactor queda en 10 y no gana `energia_300`; si las 30 extracciones son después de iniciar, sí lo gana | OK | I | `s/test_logros.py::test_la_energia_de_antes_de_iniciar_no_cuenta`, `s/test_logros.py::test_la_energia_despues_de_iniciar_si_cuenta` |
 | CP-316 | Intocable: terminar con puntos sin que te alcance un guardián | Ana y Beto en la partida | Un guardián alcanza a Beto; fin 40 a 30. Además, un jugador que termina con 0 puntos y sin penalizaciones | Ana gana `intocable`, Beto no; con 0 puntos tampoco se gana | OK | I | `s/test_logros.py::test_alcanzado_por_un_guardian_no_es_intocable`, `s/test_logros.py::test_sin_puntos_no_es_intocable` |
 | CP-317 | Las penalizaciones de antes de iniciar no cuentan | Ana en la partida, `esperando` | Un guardián la alcanza antes de iniciar; se inicia; fin con 20 puntos | Ana gana `intocable` | OK | I | `s/test_logros.py::test_las_penalizaciones_de_antes_de_iniciar_no_cuentan` |
@@ -174,7 +175,7 @@ después de iniciar), **Racha nuclear** (+25, 50 de energía del reactor en 15 s
 | CP-326 | Después del fin no hay retos y una partida nueva empieza de cero | 1) Partida finalizada. 2) Jugador con `primera_chispa` | 1) Extracción y 120 s sin golpes. 2) Llega otro `partida_iniciada` | 1) No suma nada. 2) Los retos cumplidos se olvidan | OK | U | `s/test_retos.py::test_terminada_la_partida_ya_no_se_cumplen_retos`, `s/test_retos.py::test_al_iniciar_otra_vez_se_olvida_lo_anterior` |
 | CP-327 | Con el motor real los puntos se suman en la partida y cuentan para ganar | Motor con la jugadora sobre el reactor y `GestorRetos` suscrito | 1) 3 extracciones de práctica, iniciar, 5 extracciones y 60 s. 2) Meta de 20 puntos y 1 extracción | 1) Puntaje 50 + 10 + 25 y después + 30; la práctica no cuenta. 2) 10 de energía + 10 de Primera chispa terminan la partida con motivo `puntaje` | OK | I | `s/test_retos.py::test_con_el_motor_real_los_retos_suman_puntos_en_la_partida`, `s/test_retos.py::test_los_puntos_de_los_retos_cuentan_para_ganar` |
 | CP-328 | Cada partida tiene los retos y quedan guardados | `GestorMotores`; base de la prueba con Ana y una partida | 1) Crear el motor de una partida. 2) Llega un `reto_completado` de Ana | 1) El motor tiene un `GestorRetos` suscrito. 2) Queda una fila en `eventos` con el tipo, Ana y los datos del reto | OK | I | `s/test_retos.py::test_el_gestor_suscribe_los_retos_a_cada_partida`, `s/test_retos.py::test_los_retos_cumplidos_quedan_en_la_tabla_eventos` |
-| CP-329 | Retos en una partida real | Nube; dos cuentas en la misma partida; partida iniciada | El jugador 1 es el primero en extraer y hace 5 extracciones seguidas; el jugador 2 se aleja de los guardianes 60 s | El jugador 1 suma +10 y +25 en el HUD y el jugador 2 +30; cada reto aparece una vez como `reto_completado` en la tabla `eventos` | **Pendiente** | A | Manual en la demo (procedimiento abajo) |
+| CP-329 | Retos en una partida real | Nube; dos cuentas en la misma partida; partida iniciada | El jugador 1 es el primero en extraer y hace 5 extracciones seguidas; el jugador 2 se aleja de los guardianes 60 s | El jugador 1 suma +10 y +25 en el HUD y el jugador 2 +30; cada reto aparece una vez como `reto_completado` en la tabla `eventos` | OK (demo 25/11) | A | Manual en la demo (procedimiento abajo) |
 
 **Mostrar los logros:** la ceremonia (US-18) los muestra al terminar; sus casos son del rol A. En
 el historial (US-20) todavía no; mientras tanto se consultan con `GET /logros`.
@@ -214,14 +215,14 @@ abre el cuadro de texto del navegador (`client/src/navegador.py`).
 | CP-340 | La contraseña anterior no se muestra y se respeta el largo | Navegador de celular simulado | Campo de contraseña con texto; texto con salto de línea y más de 120 caracteres | El cuadro no muestra la contraseña anterior; se quitan los saltos de línea y se corta en 120 | OK | U | `c/test_teclado_celular.py::test_la_contrasena_no_se_muestra_en_el_cuadro`, `::test_respeta_el_largo_maximo_y_quita_saltos_de_linea` |
 | CP-341 | En la compu se escribe como siempre | Escritorio, o navegador de compu simulado | Tocar el campo; tocar fuera del campo | No se abre ningún cuadro; el campo se activa para escribir con el teclado | OK | U | `c/test_teclado_celular.py::test_en_escritorio_no_se_abre_ningun_cuadro`, `::test_en_un_navegador_de_compu_se_escribe_con_el_teclado_normal`, `::test_tocar_fuera_del_campo_no_pide_nada` |
 | CP-342 | Las pantallas cargan en el navegador sin librerías de escritorio | — | Importar el lobby, la búsqueda de partidas y el canal (con los campos de texto) | No se importa `websockets`, `requests` ni `serial` | OK | U | `c/test_canal_partida.py::test_cargar_las_pantallas_no_importa_librerias_de_escritorio` (regresión) |
-| CP-343 | Registro e inicio de sesión desde un celular real | Nube; celular Android o iPhone | Abrir el dominio, crear una cuenta escribiendo en los campos e iniciar sesión | Sale el teclado del teléfono en cada campo; la cuenta se crea y se entra al lobby | **Pendiente** | A | Manual en la demo |
+| CP-343 | Registro e inicio de sesión desde un celular real | Nube; celular Android o iPhone | Abrir el dominio, crear una cuenta escribiendo en los campos e iniciar sesión | Sale el teclado del teléfono en cada campo; la cuenta se crea y se entra al lobby | OK (demo 25/11) | A | Manual en la demo |
 
 ### US-04 Publicar el login con Google
 
 | ID | Objetivo | Precondiciones | Entrada | Resultado esperado | Obtenido | Tipo | Prueba |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CP-344 | La política de privacidad está publicada en el dominio | PR #71 desplegado | Abrir `https://control-reactor.northcentralus.cloudapp.azure.com/privacidad.html` en la compu y en el celular | Carga la página con los datos que se guardan y cómo pedir que se borren | OK (24/11/2026) | A | Manual |
-| CP-345 | Entra con Google una cuenta que no es de prueba | App en "Producción" en Google Auth Platform | En la nube, "Entrar con Google" con una cuenta que no está en la lista de usuarios de prueba | Entra al lobby; si es nueva, se crea su cuenta | **Pendiente** | A | Manual en la demo |
+| CP-345 | Entra con Google una cuenta que no es de prueba | App en "Producción" en Google Auth Platform | En la nube, "Entrar con Google" con una cuenta que no está en la lista de usuarios de prueba | Entra al lobby; si es nueva, se crea su cuenta | OK (demo 25/11) | A | Manual en la demo |
 
 ## Cómo ejecutar los casos de aceptación
 

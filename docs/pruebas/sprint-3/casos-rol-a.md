@@ -17,18 +17,19 @@ Archivos: `s/` = `server/tests/`, `c/` = `client/tests/`.
 
 | Historia | Casos | OK | Pendiente |
 | --- | --- | --- | --- |
-| US-22 Temporizador en partida | CP-165 a CP-170 (6) | 5 | 1 (CP-170) |
+| US-22 Temporizador en partida | CP-165 a CP-170 (6) | 6 | 0 |
 | US-17 Criterios de victoria | CP-171 a CP-184 (14) | 14 | 0 |
 | US-24 Tabla de posiciones en tiempo real | CP-185 a CP-188 (4) | 4 | 0 |
-| US-18 Ceremonia de victoria | CP-189 a CP-195 (7) | 6 | 1 (CP-195) |
+| US-18 Ceremonia de victoria | CP-189 a CP-195 (7) | 7 | 0 |
 | US-19 Ranking global | CP-196 a CP-199 (4) | 4 | 0 |
 | US-20 Historial y estadísticas | CP-200 a CP-203 (4) | 4 | 0 |
-| US-28 Rol de administrador | CP-204 a CP-211 (8) | 7 | 1 (CP-211) |
-| Deuda técnica | CP-212 a CP-214 (3) | 2 | 1 (CP-214) |
-| **Total** | **50** | **46** | **4** |
+| US-28 Rol de administrador | CP-204 a CP-211 (8) | 8 | 0 |
+| Deuda técnica | CP-212 a CP-214 (3) | 3 | 0 |
+| **Total** | **50** | **50** | **0** |
 
-Los cuatro pendientes son de aceptación y se hacen a mano con el juego levantado (ver
-[Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación)).
+Los cuatro casos de aceptación que quedaban (CP-170, CP-195, CP-211 y CP-214) se ejecutaron a mano
+en la demo interna del 25/11 en la nube, con dos jugadores en computadora y dos en celular: los 50
+están en OK (ver [Cómo ejecutar los casos de aceptación](#cómo-ejecutar-los-casos-de-aceptación)).
 
 ## US-22 Temporizador en partida
 
@@ -42,7 +43,7 @@ desde el tiempo límite; al llegar a cero la partida termina sola.
 | CP-167 | El estado lleva el reloj y las reglas a todos | Partida iniciada | `estado()` | `partida` trae `estado`, `tiempo_limite`, `puntaje_objetivo` y `tiempo_restante` | OK | U | `s/test_fin_de_partida.py::test_el_estado_trae_el_reloj_y_las_reglas` |
 | CP-168 | Al llegar a cero termina sola | Partida de 1 s | Pasa 1 s | `partida_finalizada` con motivo `tiempo` | OK | U | `s/test_fin_de_partida.py::test_termina_cuando_se_acaba_el_tiempo`, `s/test_reglas_victoria.py::test_termina_cuando_se_acaba_el_tiempo` |
 | CP-169 | El reloj se ve como minutos y segundos | — | 300, 61, 9 y 0 s | `5:00`, `1:01`, `0:09`, `0:00`; "Esperando inicio" antes de empezar | OK | U | `c/test_hud_partida.py::test_el_reloj_se_muestra_en_minutos_y_segundos`, `::test_el_reloj_dice_si_la_partida_no_empezo_o_ya_termino` |
-| CP-170 | Los dos jugadores ven el mismo reloj | Backend local, dos clientes en la misma partida | Iniciar la partida | Los dos relojes bajan igual (diferencia ≤ 1 s) y en los últimos 30 s se ponen en rojo | **Pendiente** | A | Manual |
+| CP-170 | Los dos jugadores ven el mismo reloj | Backend local, dos clientes en la misma partida | Iniciar la partida | Los dos relojes bajan igual (diferencia ≤ 1 s) y en los últimos 30 s se ponen en rojo | OK (demo 25/11) | A | Manual |
 
 ## US-17 Criterios de victoria
 
@@ -92,7 +93,7 @@ resumen de estadísticas, con animaciones o efectos visuales, y que sea atractiv
 | CP-192 | Podio con el primero en el medio y título | — | 4 posiciones; empate; 2 jugadores | Orden 2°, 1°, 3°; "¡beto gana!" o "¡Empate!" | OK | U | `c/test_ceremonia.py::test_el_podio_pone_al_primero_en_el_medio`, `::test_con_dos_jugadores_el_podio_tiene_dos_escalones`, `::test_el_titulo_nombra_al_ganador_o_avisa_el_empate` |
 | CP-193 | Efectos: confeti y fanfarria | — | Confeti que llega abajo; armar el sonido | El papel vuelve a salir arriba; la fanfarria dura más de 0,5 s o, sin audio, no falla | OK | U | `c/test_ceremonia.py::test_el_confeti_cae_y_vuelve_a_salir_por_arriba`, `::test_la_fanfarria_se_arma_o_no_falla_sin_audio` |
 | CP-194 | La pantalla carga las estadísticas y llega desde la arena | Resultado guardándose (409) | Fin de partida | La arena muestra las posiciones 3 s y pasa a la ceremonia; reintenta mientras da 409; con otro error deja el podio | OK | U | `c/test_ceremonia.py::test_la_arena_pasa_a_la_ceremonia_unos_segundos_despues_del_fin`, `::test_si_el_resultado_se_esta_guardando_vuelve_a_intentar`, `::test_si_falla_de_otra_forma_muestra_el_error_y_deja_el_podio`, `::test_volver_lleva_al_lobby_con_el_boton_o_con_esc` |
-| CP-195 | La ceremonia se ve bien en escritorio y en el celular | Partida real de 2 jugadores | Terminarla | Podio que sube, trofeo, confeti, fanfarria y estadísticas legibles; "Volver al lobby" funciona | **Pendiente** | A | Manual |
+| CP-195 | La ceremonia se ve bien en escritorio y en el celular | Partida real de 2 jugadores | Terminarla | Podio que sube, trofeo, confeti, fanfarria y estadísticas legibles; "Volver al lobby" funciona | OK (demo 25/11) | A | Manual |
 
 ## US-19 Ranking global
 
@@ -133,7 +134,7 @@ desbloquear la cuenta de un jugador.
 | CP-208 | Cerrar partidas colgadas | Partida en curso con y sin motor | `POST /admin/partidas/{id}/cerrar` | Con motor termina con motivo `administrador`; sin motor queda `finalizada`; terminada o inexistente da 409 / 404 | OK | I | `s/test_administrador.py::test_cerrar_una_partida_en_curso_la_termina_en_el_motor`, `::test_cerrar_una_partida_sin_motor_la_marca_como_finalizada`, `::test_no_se_puede_cerrar_una_partida_terminada_o_que_no_existe`, `s/test_fin_de_partida.py::test_un_administrador_puede_cerrarla_antes` |
 | CP-209 | La cuenta de admin se crea con el script | Base con o sin la cuenta | `python -m app.scripts.crear_admin` | Crea la cuenta verificada o promueve la existente; rechaza una contraseña débil; el login informa el `rol` | OK | I | `s/test_administrador.py::test_el_script_crea_la_cuenta_de_administrador_verificada`, `::test_el_script_promueve_una_cuenta_que_ya_existe`, `::test_el_script_rechaza_una_contrasena_debil`, `::test_el_login_dice_el_rol_de_la_cuenta` |
 | CP-210 | Pantalla de administración | Sesión de admin | Lobby → "Administración"; bloquear, desbloquear, cerrar | El botón solo sirve con rol admin; las acciones llaman al servidor y recargan la lista | OK | U | `c/test_admin.py::test_el_boton_de_administracion_solo_sirve_para_un_admin`, `::test_bloquear_y_desbloquear_desde_la_lista`, `::test_cerrar_una_partida_colgada`, `::test_si_el_servidor_niega_el_acceso_se_muestra_el_motivo` |
-| CP-211 | Administrar de punta a punta | Backend con la cuenta creada por el script | Entrar como admin, bloquear a un jugador conectado y cerrar su partida | El jugador queda fuera (401 en su próxima petición) y la partida desaparece de las activas | **Pendiente** | A | Manual |
+| CP-211 | Administrar de punta a punta | Backend con la cuenta creada por el script | Entrar como admin, bloquear a un jugador conectado y cerrar su partida | El jugador queda fuera (401 en su próxima petición) y la partida desaparece de las activas | OK (demo 25/11) | A | Manual |
 
 ## Deuda técnica
 
@@ -141,7 +142,7 @@ desbloquear la cuenta de un jugador.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CP-212 | Crear y unirse toman al jugador del token | Jugadores con sesión | `POST /partidas` y `/unirse` con token; un `jugador_id` ajeno en el cuerpo | Se usa el jugador del token; sin sesión 401 | OK | I | `s/test_unirse_partidas.py::test_unirse_usa_el_jugador_del_token_y_no_el_del_cuerpo`, `::test_unirse_sin_sesion_da_401`, `s/test_partidas.py::test_post_partidas_sin_sesion_da_401`, `c/test_api_client.py::test_crear_partida_no_manda_el_creador` |
 | CP-213 | Teclado del celular en los campos de texto | Navegador táctil (simulado) | Tocar un campo, cancelar, contraseña | Se escribe lo del cuadro del navegador; cancelar deja lo que había; la contraseña no se muestra; en escritorio no cambia nada | OK | U | `c/test_teclado_celular.py` (6 pruebas) |
-| CP-214 | Escribir en el celular real | Juego en la nube abierto en un celular | Tocar usuario y contraseña en el login | Sale el teclado del celular y se puede iniciar sesión | **Pendiente** | A | Manual |
+| CP-214 | Escribir en el celular real | Juego en la nube abierto en un celular | Tocar usuario y contraseña en el login | Sale el teclado del celular y se puede iniciar sesión | OK (demo 25/11) | A | Manual |
 
 ## Cómo ejecutar los casos de aceptación
 

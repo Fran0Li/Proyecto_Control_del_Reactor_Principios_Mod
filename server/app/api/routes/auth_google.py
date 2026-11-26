@@ -38,6 +38,9 @@ ProveedorDep = Annotated[ProveedorGoogle, Depends(get_proveedor_google)]
 @router.get("/iniciar")
 def iniciar(sesion: SesionId, proveedor: ProveedorDep):
     if not proveedor.configurado:
+        # el juego deja de esperar al recibir este error en /resultado (Bug AB#159)
+        mensaje = "El login con Google no está configurado en el servidor"
+        sesiones_google.guardar(sesion, {"error": mensaje})
         return pagina_simple(
             "Login con Google no disponible",
             "Falta configurar GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor.",

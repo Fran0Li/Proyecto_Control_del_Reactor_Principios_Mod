@@ -57,8 +57,8 @@ install`. Qué está fijo y cómo actualizarlo: [`docs/dependencias.md`](docs/de
 
 ## Cliente pygame
 
-Requisito: **Python 3.12** (el que usa el CI). Con Python 3.14 el canal de la partida no conecta
-(la librería `websockets` 13 no lo soporta); `client/jugar.ps1` revisa la versión antes de arrancar.
+Requisito: **Python 3.12**, la versión con la que se prueba (CI). `client/jugar.ps1` avisa si la
+versión es otra.
 
 ```bash
 cd client

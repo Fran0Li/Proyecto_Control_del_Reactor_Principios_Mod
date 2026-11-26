@@ -49,11 +49,24 @@ class ConexionEscritorio(Conexion):
         self.estado = "conectando"
         self._tarea = asyncio.create_task(self._bucle())
 
+    def _contexto_ssl(self):
+        """Para wss usa los certificados de certifi, los mismos de `requests`.
+
+        El almacén de Windows puede traer una raíz vencida y rechazar un certificado válido.
+        """
+        if not self.url.startswith("wss://"):
+            return None
+        import ssl
+
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+
     async def _bucle(self) -> None:
         import websockets  # solo existe en escritorio: pygbag no debe intentar instalarla
 
         try:
-            async with websockets.connect(self.url) as ws:
+            async with websockets.connect(self.url, ssl=self._contexto_ssl()) as ws:
                 self._ws = ws
                 self.estado = "abierta"
                 async for texto in ws:

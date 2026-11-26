@@ -11,7 +11,7 @@ from src.red import ErrorDeRed, Respuesta
 def con_respuesta(monkeypatch, respuesta=None, error=None):
     llamadas = []
 
-    async def falsa(metodo, url, cuerpo=None, timeout=5.0):
+    async def falsa(metodo, url, cuerpo=None, timeout=5.0, headers=None):
         llamadas.append((metodo, url, cuerpo))
         if error:
             raise error
@@ -67,6 +67,7 @@ def test_estado_servidor(monkeypatch, respuesta, error, texto):
     con_respuesta(monkeypatch, respuesta, error)
     assert asyncio.run(api_client.estado_servidor()) == texto
 
+
 def test_listar_partidas_disponibles(monkeypatch):
     partidas = [{"id": 1, "escenario": "laboratorio", "jugadores": 2}]
     llamadas = con_respuesta(monkeypatch, Respuesta(200, partidas))
@@ -80,22 +81,28 @@ def test_listar_partidas_con_respuesta_sin_json_devuelve_lista_vacia(monkeypatch
     assert asyncio.run(api_client.listar_partidas_disponibles()) == []
 
 
-def test_unirse_a_partida_envia_el_jugador(monkeypatch):
+def test_unirse_a_partida_va_con_el_token_y_sin_el_jugador(monkeypatch):
     llamadas = con_respuesta(monkeypatch, Respuesta(200, {"id": 4, "jugadores": 2}))
-    datos = asyncio.run(api_client.unirse_a_partida(4, 9))
+    datos = asyncio.run(api_client.unirse_a_partida(4, "abc"))
     assert datos == {"id": 4, "jugadores": 2}
     metodo, url, cuerpo = llamadas[0]
     assert metodo == "POST" and url.endswith("/partidas/4/unirse")
-    assert cuerpo == {"jugador_id": 9}
+    assert cuerpo is None  # el servidor saca al jugador del token
+
+
+def test_crear_partida_no_manda_el_creador(monkeypatch):
+    llamadas = con_respuesta(monkeypatch, Respuesta(201, {"id": 5}))
+    asyncio.run(api_client.crear_partida("abc", "laboratorio"))
+    assert llamadas[0][2] == {"escenario": "laboratorio"}
 
 
 def test_unirse_a_partida_llena_muestra_el_detalle_del_servidor(monkeypatch):
     con_respuesta(monkeypatch, Respuesta(409, {"detail": "La partida 4 está llena"}))
     with pytest.raises(api_client.ApiError, match="está llena"):
-        asyncio.run(api_client.unirse_a_partida(4, 9))
+        asyncio.run(api_client.unirse_a_partida(4, "abc"))
 
 
 def test_unirse_a_partida_sin_conexion(monkeypatch):
     con_respuesta(monkeypatch, error=ErrorDeRed("connection refused"))
     with pytest.raises(api_client.ApiError, match="Sin conexión"):
-        asyncio.run(api_client.unirse_a_partida(4, 9))
+        asyncio.run(api_client.unirse_a_partida(4, "abc"))

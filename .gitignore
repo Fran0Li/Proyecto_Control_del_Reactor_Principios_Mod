@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv*/
 venv/
 .pytest_cache/
 .ruff_cache/
@@ -20,3 +21,6 @@ Thumbs.db
 # PlatformIO / Arduino
 hardware/**/.pio/
 hardware/**/build/
+
+# Mediciones de client/probar_control.py
+client/latencia_*.csv

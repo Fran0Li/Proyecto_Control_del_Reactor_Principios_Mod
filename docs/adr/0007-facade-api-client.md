@@ -37,8 +37,12 @@ classDiagram
         +registrar_usuario(nombre, correo, contrasena)
         +iniciar_sesion(usuario, contrasena)
         +obtener_perfil(token)
-        +crear_partida(creador_id, escenario)
-        +unirse_a_partida(partida_id, jugador_id)
+        +crear_partida(token, escenario)
+        +unirse_a_partida(partida_id, token)
+        +iniciar_partida(partida_id, token)
+        +obtener_resultado(partida_id, token)
+        +obtener_ranking(token)
+        +obtener_historial(token)
     }
     class solicitar {
         <<Subsistema>>

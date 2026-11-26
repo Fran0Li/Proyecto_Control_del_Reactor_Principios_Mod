@@ -7,6 +7,7 @@ import pygame
 from src import sesion
 from src.api_client import ApiError, listar_partidas_disponibles, unirse_a_partida
 from src.screens.componentes import Boton
+from src.screens.dibujo_fondo import dibujar_fondo_menu
 from src.screens.panel_canal import PanelCanal
 
 COLOR_FONDO = (12, 16, 32)
@@ -44,10 +45,14 @@ class BuscarPartidaScreen:
         self.panel = PanelCanal()
         self._tarea: asyncio.Task | None = None
 
-    # ciclo de vida 
+    # ciclo de vida
 
     def al_mostrar(self) -> None:
         """La llama el ciclo principal cada vez que se entra a esta pantalla."""
+        if self.unido_a is not None and self.panel.canal is None:
+            # la partida a la que se había unido ya terminó: se vuelve a buscar
+            self.unido_a = None
+            self.boton_volver.rect.x = self.centro_x + 15
         if not self.ocupada():
             self._tarea = asyncio.create_task(self._cargar())
 
@@ -98,7 +103,7 @@ class BuscarPartidaScreen:
     async def _unirse(self, partida_id: int) -> None:
         self._mostrar("Uniéndose...", es_error=False)
         try:
-            partida = await unirse_a_partida(partida_id, sesion.jugador_id())
+            partida = await unirse_a_partida(partida_id, sesion.token())
         except ApiError as error:
             self._mostrar(str(error), es_error=True)
             return
@@ -132,7 +137,7 @@ class BuscarPartidaScreen:
         return f"Partida #{partida['id']}   {escenario}   {jugadores} {plural}"
 
     def draw(self, screen: pygame.Surface) -> None:
-        screen.fill(COLOR_FONDO)
+        dibujar_fondo_menu(screen, COLOR_FONDO)
         titulo = self.fuente_titulo.render("PARTIDAS DISPONIBLES", True, COLOR_TITULO)
         screen.blit(titulo, titulo.get_rect(center=(self.centro_x, 70)))
 

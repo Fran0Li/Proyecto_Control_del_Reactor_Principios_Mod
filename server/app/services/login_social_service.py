@@ -11,6 +11,10 @@ class CorreoGoogleSinVerificarError(Exception):
     pass
 
 
+class CuentaBloqueadaError(Exception):
+    pass
+
+
 class LoginSocialService:
     def __init__(self, usuarios: UsuarioRepository) -> None:
         self.usuarios = usuarios
@@ -20,12 +24,14 @@ class LoginSocialService:
             raise CorreoGoogleSinVerificarError("Tu cuenta de Google no tiene el correo verificado")
 
         usuario = self.usuarios.obtener_por_google_id(perfil.google_id)
+        if usuario is None:
+            usuario = self.usuarios.obtener_por_correo(perfil.correo)
+            if usuario is not None:
+                usuario = self._vincular(usuario, perfil)
         if usuario is not None:
+            if usuario.bloqueado:  # US-28
+                raise CuentaBloqueadaError("Tu cuenta fue bloqueada por un administrador")
             return usuario
-
-        usuario = self.usuarios.obtener_por_correo(perfil.correo)
-        if usuario is not None:
-            return self._vincular(usuario, perfil)
 
         nuevo = Usuario(
             nombre_usuario=self._nombre_libre(perfil.correo),

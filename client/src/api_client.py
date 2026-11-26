@@ -3,6 +3,7 @@
 Todas las funciones son `async`: se usan con `await` desde una tarea (ver las pantallas), así la
 ventana no se congela mientras responde el servidor y el mismo código corre en el navegador.
 """
+
 from typing import Any
 
 from src.config import SERVER_URL
@@ -96,16 +97,70 @@ async def editar_perfil(token: str, cambios: dict) -> dict:
     return await _enviar("PATCH", "/perfil", cambios, token=token)
 
 
-async def crear_partida(creador_id: int, escenario: str | None = None) -> dict:
-    return await _enviar("POST", "/partidas", {"creador_id": creador_id, "escenario": escenario})
+async def crear_partida(token: str, escenario: str | None = None) -> dict:
+    """El servidor toma al creador del token."""
+    return await _enviar("POST", "/partidas", {"escenario": escenario}, token=token)
+
+
 
 async def listar_partidas_disponibles() -> list[dict]:
     datos = await _enviar("GET", "/partidas")
     return datos if isinstance(datos, list) else []
 
 
-async def unirse_a_partida(partida_id: int, jugador_id: int) -> dict:
-    return await _enviar("POST", f"/partidas/{partida_id}/unirse", {"jugador_id": jugador_id})
+async def unirse_a_partida(partida_id: int, token: str) -> dict:
+    """Se une el jugador del token."""
+    return await _enviar("POST", f"/partidas/{partida_id}/unirse", token=token)
+
+
+async def iniciar_partida(partida_id: int, token: str) -> dict:
+    """Solo el creador puede iniciarla (US-17); el servidor avisa a todos por el canal."""
+    return await _enviar("POST", f"/partidas/{partida_id}/iniciar", token=token)
+
+
+async def obtener_resultado(partida_id: int, token: str) -> dict:
+    """Podio y estadísticas de una partida terminada (US-18). Da 409 mientras se guarda."""
+    return await _enviar("GET", f"/partidas/{partida_id}/resultado", token=token)
+
+
+async def obtener_ranking(token: str) -> dict:
+    """{"top": [...10 mejores], "yo": puesto propio o None} (US-19)."""
+    return await _enviar("GET", "/ranking", token=token)
+
+
+async def obtener_historial(token: str) -> dict:
+    """{"resumen": {...}, "partidas": [...]} del jugador conectado (US-20)."""
+    return await _enviar("GET", "/historial", token=token)
+
+
+async def obtener_logros(token: str) -> list[dict]:
+    datos = await _enviar("GET", "/logros", token=token)
+    return datos if isinstance(datos, list) else []
+
+
+# administración (US-28): el servidor responde 403 si la cuenta no es de administrador
+
+
+async def admin_estadisticas(token: str) -> dict:
+    return await _enviar("GET", "/admin/estadisticas", token=token)
+
+
+async def admin_usuarios(token: str) -> list[dict]:
+    return await _enviar("GET", "/admin/usuarios", token=token)
+
+
+async def admin_partidas(token: str) -> list[dict]:
+    return await _enviar("GET", "/admin/partidas", token=token)
+
+
+async def admin_bloquear(token: str, usuario_id: int, bloquear: bool) -> dict:
+    accion = "bloquear" if bloquear else "desbloquear"
+    return await _enviar("POST", f"/admin/usuarios/{usuario_id}/{accion}", token=token)
+
+
+async def admin_cerrar_partida(token: str, partida_id: int) -> dict:
+    return await _enviar("POST", f"/admin/partidas/{partida_id}/cerrar", token=token)
+
 
 async def estado_servidor() -> str:
     """Texto para mostrar en pantalla según responda /health."""

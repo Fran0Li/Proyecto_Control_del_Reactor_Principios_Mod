@@ -63,22 +63,24 @@ async def canal_partida(
 ) -> None:
     # el jugador sale del token de la sesión (?token=<JWT>), así nadie se hace pasar por otro
     try:
-        jugador_id = usuario_desde_token(db, token).id
+        usuario = usuario_desde_token(db, token)
     except TokenInvalidoError:
         db.close()
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
+    jugador_id, nombre = usuario.id, usuario.nombre_usuario
     servicio = PartidaService(PartidaRepository(db))
     autorizado = servicio.es_participante(partida_id, jugador_id)
+    escenario = servicio.escenario_de(partida_id)  # US-09: el mapa de esta partida
     db.close()  # no retener la conexión a la base mientras dure el WebSocket
     if not autorizado:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await manager.conectar(partida_id, jugador_id, websocket)
-    motor = gestor_motores.obtener(partida_id)
-    motor.agregar_jugador(jugador_id)
+    motor = gestor_motores.obtener(partida_id, escenario)
+    motor.agregar_jugador(jugador_id, nombre)  # el nombre lo muestran el HUD y el podio
     await manager.difundir(
         partida_id, _evento("jugador_conectado", partida_id, jugador_id)
     )

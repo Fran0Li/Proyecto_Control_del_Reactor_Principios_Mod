@@ -7,7 +7,7 @@ que lo comprueba) está en:
 | Documento | Cubre | Casos |
 | --- | --- | --- |
 | [casos-rol-a.md](casos-rol-a.md) | US-01 a US-06 y canal con token (AB#91) | CP-01 a CP-46, CP-126 a CP-129 |
-| [casos-rol-b.md](casos-rol-b.md) | US-07, US-08, US-21 y US-25 | CP-47 a CP-125, CP-160 a CP-164 |
+| [casos-rol-b.md](casos-rol-b.md) | US-07, US-08, US-21 y US-25 | CP-47 a CP-125, CP-160 a CP-164, CP-215 a CP-264 |
 | [casos-rol-c.md](casos-rol-c.md) | Infraestructura, CI, firmware, simulador, red del cliente y versión móvil | CP-130 a CP-159 |
 
 ## Cómo se prueba

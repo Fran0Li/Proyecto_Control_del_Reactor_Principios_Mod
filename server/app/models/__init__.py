@@ -1,4 +1,5 @@
 from app.models.evento import Evento
+from app.models.logro import LogroJugador
 from app.models.participacion import Participacion
 from app.models.partida import EstadoPartida, Partida
 from app.models.ranking import RankingGlobal
@@ -11,6 +12,7 @@ __all__ = [
     "EstadoPartida",
     "Participacion",
     "Evento",
+    "LogroJugador",
     "RankingGlobal",
     "TokenUsuario",
 ]

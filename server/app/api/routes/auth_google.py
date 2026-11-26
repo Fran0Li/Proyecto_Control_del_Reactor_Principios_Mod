@@ -16,7 +16,11 @@ from app.api.paginas import pagina_simple
 from app.core.security import crear_token_acceso
 from app.repositories import UsuarioRepository
 from app.services.google_oauth import GoogleError, ProveedorGoogle, crear_proveedor_google
-from app.services.login_social_service import CorreoGoogleSinVerificarError, LoginSocialService
+from app.services.login_social_service import (
+    CorreoGoogleSinVerificarError,
+    CuentaBloqueadaError,
+    LoginSocialService,
+)
 from app.services.sesiones_google import sesiones_google
 
 router = APIRouter(prefix="/auth/google", tags=["autenticación"])
@@ -34,6 +38,9 @@ ProveedorDep = Annotated[ProveedorGoogle, Depends(get_proveedor_google)]
 @router.get("/iniciar")
 def iniciar(sesion: SesionId, proveedor: ProveedorDep):
     if not proveedor.configurado:
+        # el juego deja de esperar al recibir este error en /resultado (Bug AB#159)
+        mensaje = "El login con Google no está configurado en el servidor"
+        sesiones_google.guardar(sesion, {"error": mensaje})
         return pagina_simple(
             "Login con Google no disponible",
             "Falta configurar GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor.",
@@ -55,7 +62,7 @@ def callback(
     try:
         perfil = proveedor.obtener_perfil(code)
         usuario = LoginSocialService(UsuarioRepository(db)).entrar_con_google(perfil)
-    except (GoogleError, CorreoGoogleSinVerificarError) as fallo:
+    except (GoogleError, CorreoGoogleSinVerificarError, CuentaBloqueadaError) as fallo:
         return _fallo(state, str(fallo))
 
     sesiones_google.guardar(
@@ -67,6 +74,7 @@ def callback(
                 "id": usuario.id,
                 "nombre_usuario": usuario.nombre_usuario,
                 "correo": usuario.correo,
+                "rol": usuario.rol,
             },
         },
     )

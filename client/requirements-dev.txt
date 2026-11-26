@@ -1,0 +1,4 @@
+# Dependencias para correr las pruebas y el lint del cliente (lo que instala el CI)
+-r requirements.txt
+pytest==8.4.2
+ruff==0.8.6

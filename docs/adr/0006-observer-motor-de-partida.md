@@ -1,8 +1,8 @@
 # ADR 0006: Observer para avisar lo que pasa en la partida
 
 - **Categoría:** patrón de comportamiento
-- **Estado:** Implementado (US-25, Sprint 2); observadores de puntaje y ranking planificados para
-  el Sprint 3
+- **Estado:** Implementado (US-25, Sprint 2). En el Sprint 3 se agregaron `EvaluadorLogros` y
+  `GestorRetos` (US-27) y los observadores del fin de partida (US-17) sin modificar el motor
 - **Fecha:** 2026-10-25
 - **Relacionado:** ADR 0003 (publicar-suscribir en el canal de la partida), ADR 0005 (Adapter)
 
@@ -32,7 +32,9 @@ Usar el patrón **Observer**. El motor de cada partida es el **Publisher**: guar
 | **Publisher** (sujeto) | `MotorPartida`: `suscribir()`, `desuscribir()`, `_notificar(evento)` y la lista `_observadores` | `server/app/realtime/motor_partida.py` |
 | **Interfaz de los Subscribers** | `ObservadorPartida` (`Protocol` con `al_evento(evento)`) | `server/app/realtime/motor_partida.py` |
 | **Subscriber concreto** | `NotificadorWebSocket`: envía el estado a todos los jugadores con `ConnectionManager.difundir()` | `server/app/realtime/notificador_websocket.py` |
-| Evento | `EventoPartida(tipo, partida_id, datos)`; hoy `estado_actualizado` | `server/app/realtime/eventos.py` |
+| **Subscriber concreto** (Sprint 3) | `EvaluadorLogros`: junta la energía extraída de cada jugador y, con `partida_finalizada`, guarda los logros nuevos (US-27) | `server/app/realtime/evaluador_logros.py` |
+| **Subscriber concreto** (Sprint 3) | `GestorRetos`: sigue el avance de cada jugador en los retos de la partida y, al cumplir uno, suma los puntos con `sumar_puntaje` y publica `reto_completado` (US-27) | `server/app/realtime/retos.py` |
+| Evento | `EventoPartida(tipo, partida_id, datos)`: `estado_actualizado`, `accion_realizada` (US-11), `jugador_penalizado` (US-15), `reto_completado` (US-27) y el contrato de `partida_finalizada` (US-17) | `server/app/realtime/eventos.py` |
 | Quien suscribe | `GestorMotores.obtener()`: crea un motor por partida y le suscribe el notificador | `server/app/realtime/gestor_motores.py` |
 
 ```mermaid
@@ -60,6 +62,9 @@ classDiagram
     class ActualizadorRanking {
         <<Subscriber, Sprint 3>>
     }
+    class GestorRetos {
+        <<Subscriber, Sprint 3>>
+    }
     class GestorMotores {
         +obtener(partida_id) MotorPartida
     }
@@ -67,6 +72,7 @@ classDiagram
     ObservadorPartida <|.. NotificadorWebSocket
     ObservadorPartida <|.. RegistroEventos
     ObservadorPartida <|.. ActualizadorRanking
+    ObservadorPartida <|.. GestorRetos
     GestorMotores ..> MotorPartida : crea y suscribe
 ```
 
@@ -119,8 +125,10 @@ del servidor.
 **Positivas**
 
 - El motor no conoce el WebSocket ni la base de datos: los subscribers del Sprint 3
-  (`RegistroEventos`, `ActualizadorRanking`) se agregan suscribiéndolos en `GestorMotores`, sin
-  modificar el motor (abierto/cerrado).
+  (`RegistroEventos`, `ActualizadorRanking`, `EvaluadorLogros`, `GestorRetos`) se agregan
+  suscribiéndolos en `GestorMotores`, sin modificar el motor (abierto/cerrado). Para que un
+  subscriber pueda producir eventos (los retos publican `reto_completado`), el motor solo ganó el
+  método `publicar(tipo, datos)`, que deja el evento para el próximo tick.
 - El motor se prueba con un subscriber falso que guarda los eventos, sin red ni base de datos:
   `server/tests/test_motor_partida.py` (`test_avisa_el_estado_cuando_algo_cambia`,
   `test_no_avisa_si_nada_cambio`, `test_un_observador_que_falla_no_detiene_a_los_demas`,

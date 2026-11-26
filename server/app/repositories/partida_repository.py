@@ -36,6 +36,36 @@ class PartidaRepository:
         self.db.refresh(partida)
         return partida
 
+    def cerrar_si_sigue_esperando(self, partida_id: int) -> bool:
+        """Cierra una partida que nunca se inició (todos se fueron del lobby). True si la cerró."""
+        partida = self.obtener_por_id(partida_id)
+        if partida is None or partida.estado != EstadoPartida.esperando:
+            return False
+        self.cambiar_estado(partida, EstadoPartida.finalizada)
+        return True
+
+    def cerrar_activas(self) -> int:
+        """Cierra todas las partidas en espera o en curso. Los motores viven en memoria: al
+        arrancar el servidor ninguna puede seguir, y si quedaran activas, sus jugadores no
+        podrían crear ni unirse a otra (RN-04). Devuelve cuántas cerró."""
+        activas = self.db.scalars(select(Partida).where(Partida.estado.in_(ESTADOS_ACTIVOS)))
+        cerradas = 0
+        for partida in list(activas):
+            partida.estado = EstadoPartida.finalizada
+            partida.fecha_fin = datetime.now(UTC)
+            cerradas += 1
+        self.db.commit()
+        return cerradas
+
+    def guardar_resultado(self, partida: Partida, posiciones: dict[int, tuple[int, int]]) -> None:
+        """Cierra la partida. `posiciones`: jugador_id -> (puntaje final, posición final)."""
+        for participacion in self.listar_participaciones(partida.id):
+            if participacion.jugador_id in posiciones:
+                puntaje, posicion = posiciones[participacion.jugador_id]
+                participacion.puntaje_final = puntaje
+                participacion.posicion_final = posicion
+        self.cambiar_estado(partida, EstadoPartida.finalizada)
+
     def agregar_participante(self, partida_id: int, jugador_id: int) -> Participacion:
         participacion = Participacion(partida_id=partida_id, jugador_id=jugador_id)
         self.db.add(participacion)
@@ -46,6 +76,15 @@ class PartidaRepository:
     def listar_participaciones(self, partida_id: int) -> list[Participacion]:
         consulta = select(Participacion).where(Participacion.partida_id == partida_id)
         return list(self.db.scalars(consulta).all())
+
+    def creador(self, partida_id: int) -> int | None:
+        """El primero que entró a la partida es quien la creó (US-07)."""
+        consulta = (
+            select(Participacion.jugador_id)
+            .where(Participacion.partida_id == partida_id)
+            .order_by(Participacion.id)
+        )
+        return self.db.scalars(consulta).first()
 
     def contar_participantes(self, partida_id: int) -> int:
         consulta = (
@@ -63,6 +102,66 @@ class PartidaRepository:
             .order_by(Partida.id)
         )
         return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+    def mejor_puntaje_antes(self, jugador_id: int, partida_id: int) -> int | None:
+        """El mejor puntaje del jugador en las partidas que terminó antes de esta."""
+        consulta = (
+            select(func.max(Participacion.puntaje_final))
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .where(Partida.id < partida_id)
+        )
+        return self.db.scalar(consulta)
+
+    def historial(self, jugador_id: int, limite: int) -> list[tuple[Partida, Participacion]]:
+        """Las últimas partidas terminadas del jugador, de la más nueva a la más vieja."""
+        consulta = (
+            select(Partida, Participacion)
+            .join(Participacion, Participacion.partida_id == Partida.id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .order_by(Partida.fecha_fin.desc(), Partida.id.desc())
+            .limit(limite)
+        )
+        return [(partida, participacion) for partida, participacion in self.db.execute(consulta)]
+
+    def resumen_de(self, jugador_id: int) -> tuple[int, int]:
+        """(partidas terminadas, mejor puntaje) del jugador."""
+        consulta = (
+            select(func.count(), func.coalesce(func.max(Participacion.puntaje_final), 0))
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Participacion.jugador_id == jugador_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+        )
+        jugadas, mejor = self.db.execute(consulta).one()
+        return jugadas, mejor
+
+    def contar_por_estado(self, *estados: EstadoPartida) -> int:
+        consulta = select(func.count()).select_from(Partida).where(Partida.estado.in_(estados))
+        return self.db.scalar(consulta) or 0
+
+    def listar_activas_con_jugadores(self) -> list[tuple[Partida, int]]:
+        """Partidas esperando o en curso, con cuántos jugadores tienen (para el admin, US-28)."""
+        consulta = (
+            select(Partida, func.count(Participacion.id))
+            .outerjoin(Participacion, Participacion.partida_id == Partida.id)
+            .where(Partida.estado.in_(ESTADOS_ACTIVOS))
+            .group_by(Partida.id)
+            .order_by(Partida.id)
+        )
+        return [(partida, total) for partida, total in self.db.execute(consulta).all()]
+
+    def mejores_puntajes(self, limite: int) -> list[tuple[int, int, int]]:
+        """(jugador_id, puntaje, partida_id) de los puntajes más altos en partidas terminadas."""
+        consulta = (
+            select(Participacion.jugador_id, Participacion.puntaje_final, Participacion.partida_id)
+            .join(Partida, Partida.id == Participacion.partida_id)
+            .where(Partida.estado == EstadoPartida.finalizada)
+            .order_by(Participacion.puntaje_final.desc(), Participacion.id)
+            .limit(limite)
+        )
+        return [tuple(fila) for fila in self.db.execute(consulta).all()]
+
     def es_participante(self, partida_id: int, jugador_id: int) -> bool:
         consulta = (
             select(Participacion.id)

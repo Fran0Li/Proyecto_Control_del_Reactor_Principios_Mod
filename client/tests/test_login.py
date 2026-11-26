@@ -159,11 +159,11 @@ def test_el_canal_de_la_partida_se_abre_con_el_token_de_la_sesion(monkeypatch):
     sesion.iniciar("token-de-luis", RESPUESTA_LOGIN["usuario"])
     abiertos = []
 
-    async def crear_partida(creador_id):
+    async def crear_partida(token):
         return {"id": 4, "escenario": "laboratorio"}
 
     class PanelFalso:
-        async def abrir(self, partida_id, token):
+        async def abrir(self, partida_id, token, es_creador=False):
             abiertos.append((partida_id, token))
 
         def update(self):

@@ -1,4 +1,5 @@
-"""Pantalla de lobby: crear una partida (US-07) o ir a buscar una (US-08)."""
+"""Pantalla de lobby: crear una partida (US-07), buscar una (US-08), ver el ranking (US-19) o
+el historial (US-20)."""
 
 import asyncio
 
@@ -7,6 +8,7 @@ import pygame
 from src import sesion
 from src.api_client import ApiError, crear_partida
 from src.screens.componentes import Boton, boton_secundario
+from src.screens.dibujo_fondo import dibujar_fondo_menu
 from src.screens.panel_canal import PanelCanal
 
 COLOR_FONDO = (12, 16, 32)
@@ -27,6 +29,10 @@ class LobbyScreen:
         )
         self.boton_salir = boton_secundario(pygame.Rect(width - 190, 20, 170, 40), "Cerrar sesión")
         self.boton_perfil = boton_secundario(pygame.Rect(width - 370, 20, 170, 40), "Mi perfil")
+        self.boton_historial = boton_secundario(pygame.Rect(width - 550, 20, 170, 40), "Historial")
+        self.boton_ranking = boton_secundario(pygame.Rect(width - 730, 20, 170, 40), "Ranking")
+        # solo se ve con una cuenta de administrador (US-28)
+        self.boton_admin = boton_secundario(pygame.Rect(20, 70, 190, 40), "Administración")
         self.fuente_titulo = pygame.font.Font(None, 64)
         self.fuente_texto = pygame.font.Font(None, 32)
         self.mensaje = ""
@@ -35,13 +41,26 @@ class LobbyScreen:
         self.panel = PanelCanal()
         self._tarea: asyncio.Task | None = None
 
+    def al_mostrar(self) -> None:
+        """La llama el ciclo principal al volver al lobby (por ejemplo, después de la ceremonia)."""
+        if self.panel.canal is None:
+            self.mensaje = ""
+
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.boton_buscar.fue_presionado(event):
             self.siguiente_pantalla = "buscar"
             return
-        if self.boton_perfil.fue_presionado(event):
-            self.siguiente_pantalla = "perfil"
+        if self._es_admin() and self.boton_admin.fue_presionado(event):
+            self.siguiente_pantalla = "admin"
             return
+        for boton, destino in (
+            (self.boton_perfil, "perfil"),
+            (self.boton_historial, "historial"),
+            (self.boton_ranking, "ranking"),
+        ):
+            if boton.fue_presionado(event):
+                self.siguiente_pantalla = destino
+                return
         if self.boton_salir.fue_presionado(event):
             sesion.cerrar()
             self.mensaje = ""
@@ -50,19 +69,24 @@ class LobbyScreen:
         if self.boton_crear.fue_presionado(event) and not self.ocupada():
             self._tarea = asyncio.create_task(self._crear_partida())
 
+    @staticmethod
+    def _es_admin() -> bool:
+        actual = sesion.actual()
+        return actual is not None and actual.es_admin
+
     def ocupada(self) -> bool:
         return self._tarea is not None and not self._tarea.done()
 
     async def _crear_partida(self) -> None:
         try:
-            partida = await crear_partida(sesion.jugador_id())
+            partida = await crear_partida(sesion.token())
         except ApiError as error:
             self.mensaje = str(error)
             self.mensaje_es_error = True
             return
         self.mensaje = f"Partida #{partida['id']} creada - escenario: {partida['escenario']}"
         self.mensaje_es_error = False
-        await self.panel.abrir(partida["id"], sesion.token())
+        await self.panel.abrir(partida["id"], sesion.token(), es_creador=True)
 
     def update(self) -> None:
         self.panel.update()
@@ -71,7 +95,7 @@ class LobbyScreen:
         self.panel.cerrar()
 
     def draw(self, screen: pygame.Surface) -> None:
-        screen.fill(COLOR_FONDO)
+        dibujar_fondo_menu(screen, COLOR_FONDO)
 
         titulo = self.fuente_titulo.render("LOBBY", True, COLOR_TITULO)
         screen.blit(titulo, titulo.get_rect(center=(self.centro_x, 140)))
@@ -80,6 +104,10 @@ class LobbyScreen:
         self.boton_buscar.draw(screen)
         self.boton_salir.draw(screen)
         self.boton_perfil.draw(screen)
+        self.boton_historial.draw(screen)
+        self.boton_ranking.draw(screen)
+        if self._es_admin():
+            self.boton_admin.draw(screen)
         actual = sesion.actual()
         if actual:
             nombre = self.fuente_texto.render(actual.nombre_usuario, True, (150, 160, 190))

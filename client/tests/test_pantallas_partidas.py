@@ -8,7 +8,6 @@ import pytest
 
 from src import sesion
 from src.api_client import ApiError
-from src.config import JUGADOR_ID
 from src.screens import buscar_partida, lobby, panel_canal
 from src.screens.buscar_partida import BuscarPartidaScreen
 from src.screens.lobby import LobbyScreen
@@ -44,10 +43,12 @@ async def terminar(pantalla):
 class PanelFalso:
     def __init__(self):
         self.abierto = None
+        self.es_creador = False
         self.cerrado = False
 
-    async def abrir(self, partida_id, token):
+    async def abrir(self, partida_id, token, es_creador=False):
         self.abierto = (partida_id, token)
+        self.es_creador = es_creador
 
     def update(self):
         pass
@@ -73,8 +74,8 @@ class Servidor:
                 raise error_al_listar
             return PARTIDAS if partidas is None else partidas
 
-        async def unirse(partida_id, jugador_id):
-            self.uniones.append((partida_id, jugador_id))
+        async def unirse(partida_id, token):
+            self.uniones.append((partida_id, token))
             await asyncio.sleep(self.espera)
             if error_al_unirse:
                 raise error_al_unirse
@@ -147,7 +148,7 @@ def test_unirse_envia_la_partida_y_el_jugador_y_abre_el_canal(monkeypatch):
         return pantalla
 
     pantalla = asyncio.run(escenario())
-    assert servidor.uniones == [(2, JUGADOR_ID)]
+    assert servidor.uniones == [(2, sesion.token())]
     assert pantalla.unido_a == 2
     assert pantalla.panel.abierto == (2, sesion.token())
     assert "#2" in pantalla.mensaje and not pantalla.mensaje_es_error
@@ -182,7 +183,7 @@ def test_un_segundo_clic_mientras_espera_no_duplica_la_peticion(monkeypatch):
         await terminar(pantalla)
 
     asyncio.run(escenario())
-    assert servidor.uniones == [(1, JUGADOR_ID)]
+    assert servidor.uniones == [(1, sesion.token())]
 
 
 def test_despues_de_unirse_los_botones_de_unirse_ya_no_hacen_nada(monkeypatch):
@@ -267,14 +268,14 @@ def test_dibuja_en_todos_los_estados(monkeypatch):
     asyncio.run(escenario())
 
 
-#  lobby 
+#  lobby
 
 
 def lobby_con(monkeypatch, resultado):
     llamadas = []
 
-    async def crear(creador_id, escenario=None):
-        llamadas.append(creador_id)
+    async def crear(token, escenario=None):
+        llamadas.append(token)
         await asyncio.sleep(0.02)
         if isinstance(resultado, Exception):
             raise resultado
@@ -294,9 +295,10 @@ def test_lobby_crear_partida_muestra_el_resultado_y_abre_el_canal(monkeypatch):
         await terminar(pantalla)
 
     asyncio.run(escenario())
-    assert llamadas == [JUGADOR_ID]
+    assert llamadas == [sesion.token()]
     assert pantalla.mensaje == "Partida #5 creada - escenario: laboratorio"
     assert pantalla.panel.abierto == (5, sesion.token())
+    assert pantalla.panel.es_creador  # quien la crea es quien la puede iniciar
 
 
 def test_lobby_con_error_no_abre_el_canal(monkeypatch):
@@ -338,6 +340,7 @@ def test_lobby_dibuja_con_y_sin_mensaje(monkeypatch):
 
 
 #  panel del canal
+
 
 class CanalFalso:
     mensajes: list = []

@@ -5,29 +5,74 @@ Sin ellos el resto del juego funciona igual; solo el botón de Google avisa que 
 
 ## Crear las credenciales
 
-1. Entrar a https://console.cloud.google.com con una cuenta de Google y crear un proyecto
-   (por ejemplo `control-del-reactor`).
-2. **APIs y servicios → Pantalla de consentimiento de OAuth**
-   - Tipo de usuario: **Externo**.
-   - Nombre de la app: `Control del Reactor`, correo de soporte y correo del desarrollador.
-   - Permisos: `openid` y `.../auth/userinfo.email`.
-   - En **Usuarios de prueba** agregar los correos del equipo y del profesor. Mientras la app
-     está "en prueba", solo esos correos pueden entrar.
-3. **APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth**
-   - Tipo de aplicación: **Aplicación web**.
-   - URI de redireccionamiento autorizado: `http://localhost:8000/auth/google/callback`
-     (si el backend está en otra dirección, la misma ruta con esa dirección, igual que
-     `URL_PUBLICA` en el `.env`).
-4. Copiar el ID de cliente y el secreto al `.env`:
+Se crearon el 16/11/2026 con la cuenta de Google del proyecto (la misma del correo SMTP), en un
+proyecto de Google Cloud llamado `control-del-reactor`. No hace falta facturación: **no** aceptar
+la prueba gratuita de $300 que ofrece la consola, porque pide tarjeta.
+
+1. Entrar a https://console.cloud.google.com con la cuenta del proyecto. En el selector de
+   proyectos de arriba a la izquierda: **Proyecto nuevo** → `control-del-reactor`.
+2. Con el proyecto seleccionado, abrir **Google Auth Platform** (antes "Pantalla de consentimiento
+   de OAuth"): https://console.cloud.google.com/auth/overview → **Comenzar**.
+   - Información de la app: nombre `Control del Reactor` y correo de asistencia.
+   - Público: **Externo**.
+   - Información de contacto: un correo del equipo.
+3. **Público → Usuarios de prueba**: agregar los correos del equipo y del profesor. Mientras la app
+   está "en prueba", solo esos correos pueden entrar.
+4. **Clientes → Crear cliente** → tipo **Aplicación web**, nombre `Control del Reactor`. En
+   **URI de redireccionamiento autorizados**, una por cada lugar donde corre el backend (es
+   `URL_PUBLICA` + `/auth/google/callback`):
 
    ```
-   GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=xxxx
+   http://localhost:8000/auth/google/callback
+   https://control-reactor.northcentralus.cloudapp.azure.com/api/auth/google/callback
    ```
 
-5. Reiniciar el backend: `docker compose up --build`.
+   En "Acceso a los datos" no hay que agregar nada: `openid` y `email` vienen por defecto.
+5. Al crear el cliente, **descargar el JSON** (Google puede mostrar el secreto una sola vez).
+   Guardarlo fuera de la carpeta del repositorio y copiar dos valores de adentro al `.env`, sin
+   comillas:
 
-El secreto **no** se sube al repo; cada quien lo pone en su `.env`.
+   ```
+   GOOGLE_CLIENT_ID=<"client_id" del JSON>.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=<"client_secret" del JSON, empieza con GOCSPX->
+   ```
+
+6. Reiniciar el backend: `docker compose up --force-recreate`.
+
+El secreto **no** se sube al repo ni se pega en chats; cada quien lo pone en su `.env`.
+
+### En la nube
+
+En la VM (cómo entrar: `docs/despliegue.md`, sección 1), las mismas dos líneas en `~/reactor/.env`
+y después:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --force-recreate server
+```
+
+Para revisar la configuración **sin mostrar los valores**:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T server python -c "from app.core.config import settings as s; from app.services.google_oauth import crear_proveedor_google as g; i=s.google_client_id; k=s.google_client_secret; print('id ok:', i.endswith('.apps.googleusercontent.com'), '| secreto GOCSPX:', k.startswith('GOCSPX-'), '| configurado:', g().configurado, '| redirect:', g().redirect_uri)"
+```
+
+Debe dar todo `True` y el `redirect` igual a la segunda URI registrada en Google. Si
+`/api/auth/google/iniciar` responde 503, el servidor no ve las credenciales; si Google responde
+`redirect_uri_mismatch`, la URI registrada no coincide con `URL_PUBLICA`.
+
+## Publicar la app (salir de "Prueba")
+
+Mientras la app está en "Prueba" solo entran los usuarios de prueba. Para que cualquier cuenta de
+Google pueda entrar, en **Google Auth Platform → Información de la marca**:
+
+- **Página principal de la aplicación:** `https://control-reactor.northcentralus.cloudapp.azure.com`
+- **Vínculo a la política de privacidad:** `https://control-reactor.northcentralus.cloudapp.azure.com/privacidad.html`
+  (la sirve Caddy desde `deploy/privacidad.html`)
+- **Dominios autorizados:** el dominio de la VM.
+- Sin logo: con logo Google pide verificar la app.
+
+Después, **Público → Publicar app**. Como solo se piden `openid` y `email`, no hace
+falta la verificación de Google.
 
 ## Cómo funciona
 

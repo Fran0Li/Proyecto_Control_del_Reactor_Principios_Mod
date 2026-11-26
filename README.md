@@ -52,7 +52,13 @@ pytest
 ruff check .
 ```
 
+Para instalar exactamente las mismas versiones que el CI, agregá `-c constraints.txt` al `pip
+install`. Qué está fijo y cómo actualizarlo: [`docs/dependencias.md`](docs/dependencias.md).
+
 ## Cliente pygame
+
+Requisito: **Python 3.12**, la versión con la que se prueba (CI). `client/jugar.ps1` avisa si la
+versión es otra.
 
 ```bash
 cd client

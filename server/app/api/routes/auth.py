@@ -127,6 +127,7 @@ class UsuarioResponse(BaseModel):
     id: int
     nombre_usuario: str
     correo: str
+    rol: str  # "jugador" o "administrador" (US-28)
 
 
 class SesionResponse(BaseModel):
